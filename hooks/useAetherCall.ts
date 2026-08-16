@@ -1,8 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AgoraVoiceAI,
+  AgoraVoiceAIEvents,
+  TranscriptHelperMode,
+  TurnStatus,
+  type TranscriptHelperItem,
+} from "agora-agent-client-toolkit";
 import { api } from "@/lib/api";
-import { parseTranscriptMessage, type TranscriptLine } from "@/lib/rtm-parse";
+import { explainCallError } from "@/lib/call-error";
+import { AGENT_UID } from "@/lib/ids";
+import type { TranscriptLine } from "@/lib/rtm-parse";
 
 type SessionView = {
   agentId?: string;
@@ -55,13 +64,51 @@ export type CallTelemetry = {
 
 type RtmHandle = {
   login: (opts: { token: string }) => Promise<unknown>;
-  subscribe: (channel: string) => Promise<unknown>;
-  addEventListener: (
-    event: "message",
-    handler: (e: { message: string | Uint8Array }) => void,
-  ) => void;
+  subscribe: (channel: string, options?: Record<string, boolean>) => Promise<unknown>;
+  addEventListener: (event: string, handler: (...args: never[]) => void) => void;
+  removeEventListener: (event: string, handler: (...args: never[]) => void) => void;
+  publish: (
+    channelName: string,
+    message: string | Uint8Array,
+    options?: object,
+  ) => Promise<unknown>;
   logout: () => Promise<unknown>;
 };
+
+type RtmModule = {
+  RTMClient?: new (appId: string, userId: string, config?: object) => RtmHandle;
+  default?: { RTM?: new (appId: string, userId: string, config?: object) => RtmHandle };
+  RTM?: new (appId: string, userId: string, config?: object) => RtmHandle;
+};
+
+function resolveRtmCtor(mod: RtmModule) {
+  return (
+    mod.RTMClient ??
+    mod.default?.RTM ??
+    mod.RTM ??
+    null
+  );
+}
+
+function mapTranscript(
+  items: TranscriptHelperItem<unknown>[],
+): TranscriptLine[] {
+  return items
+    .filter((item) => item.text?.trim())
+    .map((item) => {
+      const meta = item.metadata as { object?: string; user_id?: string } | null;
+      const agent =
+        item.uid === AGENT_UID ||
+        item.uid === String(AGENT_UID) ||
+        meta?.object?.includes("assistant") === true;
+      return {
+        role: agent ? "agent" : "user",
+        text: item.text,
+        final: item.status === TurnStatus.END || item.status === TurnStatus.INTERRUPTED,
+        at: item._time || Date.now(),
+      } satisfies TranscriptLine;
+    });
+}
 
 export function useAetherCall(
   channel: string,
@@ -77,6 +124,7 @@ export function useAetherCall(
   const speakingRef = useRef(false);
 
   const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptLine[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +140,30 @@ export function useAetherCall(
     listenMs: 0,
   });
 
+  const cleanupMedia = useCallback(async () => {
+    try {
+      AgoraVoiceAI.getInstance().unsubscribe();
+      AgoraVoiceAI.getInstance().destroy();
+    } catch {
+      /* not initialized */
+    }
+    micRef.current?.stop();
+    micRef.current?.close();
+    await rtcRef.current?.leave().catch(() => undefined);
+    await rtmRef.current?.logout().catch(() => undefined);
+    rtcRef.current = null;
+    micRef.current = null;
+    remoteAudioRef.current = null;
+    rtmRef.current = null;
+  }, []);
+
   const start = useCallback(async () => {
+    if (!channel) {
+      setError("Channel is not ready. Refresh the page.");
+      return;
+    }
     setError(null);
+    setConnecting(true);
     setTranscripts([]);
     setTelemetry({
       startedAt: Date.now(),
@@ -106,14 +176,21 @@ export function useAetherCall(
     try {
       const [{ default: AgoraRTC }, rtmMod] = await Promise.all([
         import("agora-rtc-sdk-ng"),
-        import("agora-rtm-sdk"),
+        import("agora-rtm"),
       ]);
-      const RTMClient = rtmMod.RTMClient;
+      const RTMClient = resolveRtmCtor(rtmMod as RtmModule);
+      if (!RTMClient) {
+        throw new Error("Agora Signaling SDK did not export RTMClient");
+      }
 
       const { rtcToken, rtmToken } = await api.token(channel, uid);
       const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
       if (!appId) throw new Error("NEXT_PUBLIC_AGORA_APP_ID is not set");
 
+      const rtcSdk = AgoraRTC as typeof AgoraRTC & {
+        setParameter?: (key: string, value: unknown) => void;
+      };
+      rtcSdk.setParameter?.("ENABLE_AUDIO_PTS_METADATA", true);
       const rtc = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       rtc.on("user-published", async (user, mediaType) => {
         if (mediaType !== "audio") return;
@@ -134,29 +211,42 @@ export function useAetherCall(
         }
         setRemoteUsers((prev) => prev.filter((id) => id !== String(user.uid)));
       });
+
       await rtc.join(appId, channel, rtcToken, uid);
-      const mic = await AgoraRTC.createMicrophoneAudioTrack();
+      const mic = await AgoraRTC.createMicrophoneAudioTrack({
+        encoderConfig: "speech_standard",
+        AEC: true,
+        ANS: true,
+      });
       await rtc.publish(mic);
       rtcRef.current = rtc as unknown as RtcHandle;
       micRef.current = mic;
 
-      const rtm = new RTMClient(appId, String(uid));
+      const rtm = new RTMClient(appId, String(uid), { useStringUserId: false });
       await rtm.login({ token: rtmToken });
-      await rtm.subscribe(channel);
-      rtm.addEventListener("message", (event) => {
-        const line = parseTranscriptMessage(event.message);
-        if (!line) return;
-        setTranscripts((prev) => {
-          if (!line.final && prev.length) {
-            const last = prev[prev.length - 1];
-            if (last.role === line.role && !last.final) {
-              return [...prev.slice(0, -1), line];
-            }
-          }
-          return [...prev, line];
-        });
+      await rtm.subscribe(channel, { withMessage: true, withPresence: true });
+      rtmRef.current = rtm;
+
+      const ai = await AgoraVoiceAI.init({
+        rtcEngine: rtc,
+        rtmEngine: rtm,
+        renderMode: TranscriptHelperMode.TEXT,
+        enableLog: false,
       });
-      rtmRef.current = rtm as unknown as RtmHandle;
+      ai.on(AgoraVoiceAIEvents.TRANSCRIPT_UPDATED, (items) => {
+        setTranscripts(mapTranscript(items));
+      });
+      ai.on(AgoraVoiceAIEvents.AGENT_SPEAKING_CHANGED, (_id, active) => {
+        setAgentSpeaking(Boolean(active));
+        speakingRef.current = Boolean(active);
+      });
+      ai.on(AgoraVoiceAIEvents.AGENT_ERROR, (_id, err) => {
+        const text = typeof err === "object" && err && "message" in err
+          ? String((err as { message: string }).message)
+          : "Agent error";
+        setError(text);
+      });
+      ai.subscribeMessage(channel);
 
       if (inviteAgent) {
         const invite = await api.invite(channel);
@@ -165,28 +255,21 @@ export function useAetherCall(
       }
       setConnected(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      micRef.current?.stop();
-      micRef.current?.close();
-      await rtcRef.current?.leave().catch(() => undefined);
-      await rtmRef.current?.logout().catch(() => undefined);
+      setError(explainCallError(e));
+      await cleanupMedia();
+    } finally {
+      setConnecting(false);
     }
-  }, [channel, uid, inviteAgent]);
+  }, [channel, uid, inviteAgent, cleanupMedia]);
 
   const stop = useCallback(async () => {
     try {
       if (agentIdRef.current) await api.stop(agentIdRef.current, channel);
     } finally {
-      micRef.current?.stop();
-      micRef.current?.close();
-      await rtcRef.current?.leave().catch(() => undefined);
-      await rtmRef.current?.logout().catch(() => undefined);
+      await cleanupMedia();
       agentIdRef.current = null;
-      rtcRef.current = null;
-      micRef.current = null;
-      remoteAudioRef.current = null;
-      rtmRef.current = null;
       setConnected(false);
+      setConnecting(false);
       setAgentSpeaking(false);
       speakingRef.current = false;
       setRemoteUsers([]);
@@ -196,7 +279,7 @@ export function useAetherCall(
         agentLevel: 0,
       }));
     }
-  }, [channel]);
+  }, [channel, cleanupMedia]);
 
   useEffect(() => {
     if (!channel) return;
@@ -242,6 +325,7 @@ export function useAetherCall(
 
   return {
     connected,
+    connecting,
     agentSpeaking,
     transcripts,
     error,

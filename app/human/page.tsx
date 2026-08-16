@@ -3,73 +3,63 @@
 import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAetherCall } from "@/hooks/useAetherCall";
+import { useNow } from "@/hooks/useNow";
 import { api } from "@/lib/api";
 import { HUMAN_UID } from "@/lib/ids";
 import {
   dealEconomics,
   formatDuration,
   formatInr,
+  formatIst,
   formatUsd,
   stageLabel,
 } from "@/lib/metrics";
+import { AppShell } from "@/components/desk/AppShell";
 import { FlashValue, LiveMoney } from "@/components/desk/primitives";
 
 function HumanDesk() {
   const params = useSearchParams();
   const channel = params.get("channel") ?? "";
   const call = useAetherCall(channel, HUMAN_UID, { inviteAgent: false });
+  const now = useNow(1000);
   const waiting = call.session?.escalation?.waiting;
   const lead = call.session?.lead;
   const economics = dealEconomics(lead);
 
   const hint = useMemo(() => {
-    if (!channel) return "Open this page from the live call using Open human specialist.";
+    if (!channel) return "Open this page from Live call → Human specialist.";
     if (waiting) return "Buyer is waiting. Join the Agora channel and take over.";
     return "Join the same RTC channel. After you connect, stop Maya for a clean handover.";
   }, [channel, waiting]);
 
-  return (
-    <div className="min-h-full bg-[#f4f6f8]">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
-        <div>
-          <h1 className="text-base font-semibold text-slate-900">MolVaani · Human specialist</h1>
-          <p className="text-xs text-slate-500">Warm transfer desk</p>
-        </div>
-        <div className="text-sm">
-          <span className="text-xs text-slate-500">Duration </span>
-          <span className="num font-medium">{formatDuration(call.telemetry.elapsedMs)}</span>
-        </div>
-      </header>
+  const status = call.connected ? "On channel" : "Idle";
 
-      <main className="mx-auto max-w-5xl space-y-4 p-4">
+  return (
+    <AppShell
+      active="human"
+      channel={channel}
+      status={status}
+      duration={formatDuration(call.telemetry.elapsedMs)}
+      ist={formatIst(now)}
+      mcpAttached={call.mcpAttached}
+      connected={call.connected}
+      connecting={call.connecting}
+      onStart={call.start}
+      onStop={call.stop}
+      startDisabled={!channel || call.connecting}
+    >
+      <div className="space-y-4">
         <p className="text-sm text-slate-600">{hint}</p>
-        <div className="flex flex-wrap gap-2">
+        {call.session?.agentId ? (
           <button
-            disabled={!channel || call.connected}
-            onClick={call.start}
-            className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-45"
+            onClick={() => {
+              void api.stop(call.session!.agentId!, channel);
+            }}
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm"
           >
-            Join live channel
+            Stop Maya
           </button>
-          {call.connected ? (
-            <button
-              onClick={call.stop}
-              className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white"
-            >
-              Leave
-            </button>
-          ) : null}
-          {call.session?.agentId ? (
-            <button
-              onClick={() => {
-                  void api.stop(call.session!.agentId!, channel);
-              }}
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm"
-            >
-              Stop Maya
-            </button>
-          ) : null}
-        </div>
+        ) : null}
         {call.error ? <p className="text-sm text-red-700">{call.error}</p> : null}
 
         <section className="panel">
@@ -151,8 +141,8 @@ function HumanDesk() {
             </table>
           </section>
         ) : null}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

@@ -24,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className={`${inter.className} min-h-full`}>{children}</body>
+      <body className={`${inter.className} h-full overflow-hidden`}>{children}</body>
     </html>
   );
 }

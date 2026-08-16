@@ -71,8 +71,10 @@ export async function POST(req: NextRequest) {
       parameters: {
         data_channel: DataChannel.Rtm,
         enable_error_message: true,
+        enable_metrics: true,
         audio_scenario: AudioScenario.Aiserver,
-      },
+        transcript: { enable: true, protocol_version: "v2" },
+      } as never,
     })
       .withStt(new DeepgramSTT({ model: "nova-3", language: "en-US" }))
       .withLlm(llm)

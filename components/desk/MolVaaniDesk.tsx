@@ -14,6 +14,7 @@ import {
   winProbability,
 } from "@/lib/metrics";
 import { FlashValue, LiveMoney, Waveform } from "./primitives";
+import { AppShell } from "./AppShell";
 
 const PLAYBOOK = [
   {
@@ -63,7 +64,6 @@ export function MolVaaniDesk({ channel }: { channel: string }) {
     (n, l) => n + l.text.trim().split(/\s+/).filter(Boolean).length,
     0,
   );
-  const humanHref = `/human?channel=${encodeURIComponent(channel)}`;
   const playbook = useMemo(
     () =>
       PLAYBOOK.map((step) => ({
@@ -87,73 +87,20 @@ export function MolVaaniDesk({ channel }: { channel: string }) {
     : "Idle";
 
   return (
-    <div className="min-h-full bg-[#f4f6f8]">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
-        <div>
-          <h1 className="text-base font-semibold text-slate-900">MolVaani</h1>
-          <p className="text-xs text-slate-500">Voice revenue desk · EchoSphere PS21 · Agora</p>
-        </div>
-        <div className="flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                call.connected
-                  ? call.agentSpeaking
-                    ? "speak-dot bg-blue-600"
-                    : "live-dot bg-emerald-600"
-                  : "bg-slate-300"
-              }`}
-            />
-            <span className="text-slate-700">{status}</span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500">Duration </span>
-            <span className="num font-medium">{formatDuration(call.telemetry.elapsedMs)}</span>
-          </div>
-          <div className="hidden md:block">
-            <span className="text-xs text-slate-500">IST </span>
-            <span className="num">{formatIst(now)}</span>
-          </div>
-        </div>
-      </header>
-
-      <div className="space-y-4 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {!call.connected ? (
-            <button
-              onClick={call.start}
-              disabled={!channel}
-              className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
-            >
-              Start live call
-            </button>
-          ) : (
-            <button
-              onClick={call.stop}
-              className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
-            >
-              End call
-            </button>
-          )}
-          <a
-            href={humanHref}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
-          >
-            Open human specialist
-          </a>
-          {call.mcpAttached ? (
-            <span className="text-xs font-medium text-emerald-700">MCP live</span>
-          ) : call.connected ? (
-            <span className="text-xs text-amber-700">
-              Voice live. Set PUBLIC_BASE_URL so Agora can write CRM.
-            </span>
-          ) : (
-            <span className="text-xs text-slate-500">Microphone required. You can interrupt Maya.</span>
-          )}
-        </div>
-
+    <AppShell
+      active="live"
+      channel={channel}
+      status={status}
+      duration={formatDuration(call.telemetry.elapsedMs)}
+      ist={formatIst(now)}
+      mcpAttached={call.mcpAttached}
+      connected={call.connected}
+      connecting={call.connecting}
+      onStart={call.start}
+      onStop={call.stop}
+      startDisabled={!channel}
+    >
+      <div className="space-y-4">
         {call.error ? (
           <p className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {call.error}
@@ -385,7 +332,7 @@ export function MolVaaniDesk({ channel }: { channel: string }) {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

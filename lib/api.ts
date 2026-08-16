@@ -30,8 +30,8 @@ export const api = {
     post<TokenResponse>("/api/token", { channel, uid }),
   invite: (channel: string) =>
     post<InviteResponse>("/api/invite-agent", { channel }),
-  stop: (agentId: string) =>
-    post<{ stopped: boolean }>("/api/stop-conversation", { agentId }),
+  stop: (agentId: string, channel?: string) =>
+    post<{ stopped: boolean }>("/api/stop-conversation", { agentId, channel }),
   session: async (channel: string) => {
     const res = await fetch(`${BACKEND}/api/session/${encodeURIComponent(channel)}`, {
       cache: "no-store",

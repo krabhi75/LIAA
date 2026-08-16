@@ -6,7 +6,7 @@ Record the screen at http://localhost:3000 with system audio + mic.
 
 | Time | What to show | What to say |
 |---|---|---|
-| 0:00–0:20 | Title card: AetherClose, PS21, Agora Conversational AI | One sentence: live sales agent, not a chatbot |
+| 0:00–0:20 | Title card: MolVaani (मोलवाणी), PS21, Agora Conversational AI | One sentence: the voice that closes the sauda — live agent, not a chatbot |
 | 0:20–0:40 | Architecture diagram (Whimsical) | Agora owns the channel, barge-in, STT/LLM/TTS. Our server starts the agent and runs tools |
 | 0:40–1:00 | Click Start live call, allow mic, Maya greets | Point at “interrupt anytime” |
 | 1:00–1:30 | Ask pricing, then interrupt with Slack/Teams | Show barge-in; Maya stops and compares |

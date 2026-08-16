@@ -94,6 +94,18 @@ export function setAgentId(channel: string, agentId: string): void {
   getOrCreateSession(channel).agentId = agentId;
 }
 
+export function findChannelByAgentId(agentId: string): string | null {
+  for (const session of memory().sessions.values()) {
+    if (session.agentId === agentId) return session.channel;
+  }
+  return null;
+}
+
+export function clearAgentId(channel: string): void {
+  const session = memory().sessions.get(channel);
+  if (session) session.agentId = undefined;
+}
+
 export function recordTool(
   channel: string,
   tool: string,

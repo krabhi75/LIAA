@@ -2,6 +2,7 @@ export type TranscriptLine = {
   role: "user" | "agent" | "system";
   text: string;
   final: boolean;
+  at: number;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -48,6 +49,7 @@ export function parseTranscriptMessage(
       role: isAgent ? "agent" : "user",
       text: body,
       final,
+      at: Date.now(),
     };
   } catch {
     return null;

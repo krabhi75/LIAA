@@ -5,83 +5,160 @@ import { useSearchParams } from "next/navigation";
 import { useAetherCall } from "@/hooks/useAetherCall";
 import { api } from "@/lib/api";
 import { HUMAN_UID } from "@/lib/ids";
+import {
+  dealEconomics,
+  formatDuration,
+  formatInr,
+  formatUsd,
+  stageLabel,
+} from "@/lib/metrics";
+import { FlashValue, LiveMoney } from "@/components/desk/primitives";
 
 function HumanDesk() {
   const params = useSearchParams();
   const channel = params.get("channel") ?? "";
   const call = useAetherCall(channel, HUMAN_UID, { inviteAgent: false });
   const waiting = call.session?.escalation?.waiting;
+  const lead = call.session?.lead;
+  const economics = dealEconomics(lead);
 
   const hint = useMemo(() => {
-    if (!channel) return "Open this page from the main call using Open human specialist.";
-    if (waiting) return "Customer is waiting. Join the live Agora channel and take over.";
-    return "Join the same RTC channel. If Maya is still speaking, end the agent from the main desk after you connect.";
+    if (!channel) return "Open this page from the live call using Open human specialist.";
+    if (waiting) return "Buyer is waiting. Join the Agora channel and take over.";
+    return "Join the same RTC channel. After you connect, stop Maya for a clean handover.";
   }, [channel, waiting]);
 
   return (
-    <div className="min-h-full p-6">
-      <p className="text-[11px] tracking-[0.2em] uppercase text-[#d4b15f]">
-        Human specialist
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold">Warm transfer desk</h1>
-      <p className="mt-2 max-w-xl text-sm text-[#8b97ab]">{hint}</p>
+    <div className="min-h-full bg-[#f4f6f8]">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
+        <div>
+          <h1 className="text-base font-semibold text-slate-900">MolVaani · Human specialist</h1>
+          <p className="text-xs text-slate-500">Warm transfer desk</p>
+        </div>
+        <div className="text-sm">
+          <span className="text-xs text-slate-500">Duration </span>
+          <span className="num font-medium">{formatDuration(call.telemetry.elapsedMs)}</span>
+        </div>
+      </header>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          disabled={!channel || call.connected}
-          onClick={call.start}
-          className="rounded-md bg-[#d4b15f] px-4 py-2 text-sm font-semibold text-[#0c0f14]"
-        >
-          Join live channel
-        </button>
-        {call.connected ? (
+      <main className="mx-auto max-w-5xl space-y-4 p-4">
+        <p className="text-sm text-slate-600">{hint}</p>
+        <div className="flex flex-wrap gap-2">
           <button
-            onClick={call.stop}
-            className="rounded-md bg-[#f87171] px-4 py-2 text-sm font-semibold text-[#0c0f14]"
+            disabled={!channel || call.connected}
+            onClick={call.start}
+            className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-45"
           >
-            Leave
+            Join live channel
           </button>
-        ) : null}
-        {call.session?.agentId ? (
-          <button
-            onClick={() => {
-              void api.stop(call.session!.agentId!);
-            }}
-            className="rounded-md border border-[#2a3344] px-4 py-2 text-sm"
-          >
-            Stop Maya (handover)
-          </button>
-        ) : null}
-      </div>
+          {call.connected ? (
+            <button
+              onClick={call.stop}
+              className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white"
+            >
+              Leave
+            </button>
+          ) : null}
+          {call.session?.agentId ? (
+            <button
+              onClick={() => {
+                  void api.stop(call.session!.agentId!, channel);
+              }}
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm"
+            >
+              Stop Maya
+            </button>
+          ) : null}
+        </div>
+        {call.error ? <p className="text-sm text-red-700">{call.error}</p> : null}
 
-      {call.error ? (
-        <p className="mt-4 text-sm text-[#f87171]">{call.error}</p>
-      ) : null}
-
-      {call.session?.escalation ? (
-        <section className="mt-8 max-w-xl rounded-xl border border-[#2a3344] bg-[#141922] p-5">
-          <h2 className="text-sm font-medium text-[#d4b15f]">Conversation context</h2>
-          <p className="mt-2 text-sm">{call.session.escalation.reason}</p>
-          <p className="mt-2 text-sm text-[#8b97ab]">{call.session.escalation.summary}</p>
-          <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <dt className="text-[11px] uppercase text-[#8b97ab]">Company</dt>
-              <dd>{call.session.lead?.company || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-[11px] uppercase text-[#8b97ab]">Seats</dt>
-              <dd>{call.session.lead?.seats ?? "—"}</dd>
-            </div>
-          </dl>
+        <section className="panel">
+          <table className="sheet">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="text-slate-500">Account</td>
+                <td className="font-medium">
+                  <FlashValue value={lead?.company} fallback="No account yet" />
+                </td>
+              </tr>
+              <tr>
+                <td className="text-slate-500">Stage</td>
+                <td>{stageLabel(lead?.status)}</td>
+              </tr>
+              <tr>
+                <td className="text-slate-500">ACV</td>
+                <td className="num font-semibold">
+                  {economics.seats ? (
+                    <>
+                      <LiveMoney value={economics.arrUsd} format={(n) => formatUsd(n)} />
+                      <span className="ml-2 font-normal text-slate-500">
+                        {formatInr(economics.arrInr)}
+                      </span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td className="text-slate-500">Seats</td>
+                <td>
+                  <FlashValue value={lead?.seats ?? null} />
+                </td>
+              </tr>
+              <tr>
+                <td className="text-slate-500">Plan</td>
+                <td>
+                  <FlashValue value={economics.plan?.name} />
+                </td>
+              </tr>
+              <tr>
+                <td className="text-slate-500">Competitor</td>
+                <td>
+                  <FlashValue value={lead?.competitor} />
+                </td>
+              </tr>
+              <tr>
+                <td className="text-slate-500">Channel</td>
+                <td className="font-mono text-xs">{channel || "—"}</td>
+              </tr>
+            </tbody>
+          </table>
         </section>
-      ) : null}
+
+        {call.session?.escalation ? (
+          <section className="panel">
+            <table className="sheet">
+              <thead>
+                <tr>
+                  <th>Conversation context</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <p className="font-medium">{call.session.escalation.reason}</p>
+                    <p className="mt-1 text-slate-600">{call.session.escalation.summary}</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        ) : null}
+      </main>
     </div>
   );
 }
 
 export default function HumanPage() {
   return (
-    <Suspense fallback={<p className="p-6 text-[#8b97ab]">Loading desk…</p>}>
+    <Suspense fallback={<p className="p-6 text-sm text-slate-500">Loading specialist desk…</p>}>
       <HumanDesk />
     </Suspense>
   );

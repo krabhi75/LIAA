@@ -37,6 +37,20 @@ type RtcHandle = {
 type MicHandle = {
   stop: () => void;
   close: () => void;
+  getVolumeLevel?: () => number;
+};
+
+type AudioLevelHandle = {
+  getVolumeLevel?: () => number;
+};
+
+export type CallTelemetry = {
+  startedAt: number;
+  elapsedMs: number;
+  buyerLevel: number;
+  agentLevel: number;
+  agentTalkMs: number;
+  listenMs: number;
 };
 
 type RtmHandle = {
@@ -57,8 +71,10 @@ export function useAetherCall(
   const inviteAgent = options.inviteAgent !== false;
   const rtcRef = useRef<RtcHandle | null>(null);
   const micRef = useRef<MicHandle | null>(null);
+  const remoteAudioRef = useRef<AudioLevelHandle | null>(null);
   const rtmRef = useRef<RtmHandle | null>(null);
   const agentIdRef = useRef<string | null>(null);
+  const speakingRef = useRef(false);
 
   const [connected, setConnected] = useState(false);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
@@ -67,9 +83,26 @@ export function useAetherCall(
   const [mcpAttached, setMcpAttached] = useState(false);
   const [session, setSession] = useState<SessionView | null>(null);
   const [remoteUsers, setRemoteUsers] = useState<string[]>([]);
+  const [telemetry, setTelemetry] = useState<CallTelemetry>({
+    startedAt: 0,
+    elapsedMs: 0,
+    buyerLevel: 0,
+    agentLevel: 0,
+    agentTalkMs: 0,
+    listenMs: 0,
+  });
 
   const start = useCallback(async () => {
     setError(null);
+    setTranscripts([]);
+    setTelemetry({
+      startedAt: Date.now(),
+      elapsedMs: 0,
+      buyerLevel: 0,
+      agentLevel: 0,
+      agentTalkMs: 0,
+      listenMs: 0,
+    });
     try {
       const [{ default: AgoraRTC }, rtmMod] = await Promise.all([
         import("agora-rtc-sdk-ng"),
@@ -86,13 +119,19 @@ export function useAetherCall(
         if (mediaType !== "audio") return;
         await rtc.subscribe(user, mediaType);
         user.audioTrack?.play();
+        remoteAudioRef.current = user.audioTrack as AudioLevelHandle;
         setAgentSpeaking(true);
+        speakingRef.current = true;
         setRemoteUsers((prev) =>
           prev.includes(String(user.uid)) ? prev : [...prev, String(user.uid)],
         );
       });
       rtc.on("user-unpublished", (user, mediaType) => {
-        if (mediaType === "audio") setAgentSpeaking(false);
+        if (mediaType === "audio") {
+          setAgentSpeaking(false);
+          speakingRef.current = false;
+          remoteAudioRef.current = null;
+        }
         setRemoteUsers((prev) => prev.filter((id) => id !== String(user.uid)));
       });
       await rtc.join(appId, channel, rtcToken, uid);
@@ -136,7 +175,7 @@ export function useAetherCall(
 
   const stop = useCallback(async () => {
     try {
-      if (agentIdRef.current) await api.stop(agentIdRef.current);
+      if (agentIdRef.current) await api.stop(agentIdRef.current, channel);
     } finally {
       micRef.current?.stop();
       micRef.current?.close();
@@ -145,12 +184,19 @@ export function useAetherCall(
       agentIdRef.current = null;
       rtcRef.current = null;
       micRef.current = null;
+      remoteAudioRef.current = null;
       rtmRef.current = null;
       setConnected(false);
       setAgentSpeaking(false);
+      speakingRef.current = false;
       setRemoteUsers([]);
+      setTelemetry((prev) => ({
+        ...prev,
+        buyerLevel: 0,
+        agentLevel: 0,
+      }));
     }
-  }, []);
+  }, [channel]);
 
   useEffect(() => {
     if (!channel) return;
@@ -163,19 +209,36 @@ export function useAetherCall(
       }
     };
     tick();
-    const id = setInterval(tick, 2000);
+    const id = setInterval(tick, connected ? 700 : 2500);
     return () => clearInterval(id);
-  }, [channel]);
+  }, [channel, connected]);
+
+  useEffect(() => {
+    if (!connected) return;
+    const id = window.setInterval(() => {
+      const buyer = micRef.current?.getVolumeLevel?.() ?? 0;
+      const agent = remoteAudioRef.current?.getVolumeLevel?.() ?? 0;
+      setTelemetry((prev) => ({
+        ...prev,
+        elapsedMs: prev.startedAt ? Date.now() - prev.startedAt : prev.elapsedMs,
+        buyerLevel: buyer,
+        agentLevel: agent,
+        agentTalkMs: prev.agentTalkMs + (speakingRef.current ? 80 : 0),
+        listenMs: prev.listenMs + (speakingRef.current ? 0 : 80),
+      }));
+    }, 80);
+    return () => window.clearInterval(id);
+  }, [connected]);
 
   useEffect(() => {
     const onUnload = () => {
       if (agentIdRef.current) {
-        void api.stop(agentIdRef.current);
+        void api.stop(agentIdRef.current, channel);
       }
     };
     window.addEventListener("beforeunload", onUnload);
     return () => window.removeEventListener("beforeunload", onUnload);
-  }, []);
+  }, [channel]);
 
   return {
     connected,
@@ -185,6 +248,7 @@ export function useAetherCall(
     mcpAttached,
     session,
     remoteUsers,
+    telemetry,
     start,
     stop,
   };

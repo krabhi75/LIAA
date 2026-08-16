@@ -1,8 +1,8 @@
-# AetherClose
+# MolVaani (मोलवाणी)
 
 EchoSphere (Knotic × Agora) · Track **Adaptive AI Sales and Negotiation Agent** · **PS21**
 
-Live voice sales agent on **Agora Conversational AI**. Not a chatbot with STT/TTS bolted on.
+The voice that closes the sauda. Live Agora Conversational AI sales agent for Indian buyers — interrupt, bargain, remember. Not a chatbot with STT/TTS bolted on.
 
 **GitHub:** https://github.com/krabhi75/aetherclose
 
@@ -17,12 +17,13 @@ EchoSphere asks for: working prototype, source repo, README, architecture diagra
 | Call sequence | [Whimsical sequence](https://whimsical.com/aetherclose-ps21-live-call-flow-GJmAnfXzaDjsPyvPWAfoxQ) |
 | Requirement map | [Whimsical mind map](https://whimsical.com/aetherclose-echosphere-requirement-map-LbwERus1kZJQMHqmwMf2Mu) |
 | Commudle paste copy | [docs/SUBMISSION.md](docs/SUBMISSION.md) |
+| Image gallery | [docs/gallery/](docs/gallery/) |
 | Demo video shot list | [docs/DEMO.md](docs/DEMO.md) |
 | Tech list + limitations | This README |
 
 ## Terms mapping
 
-| EchoSphere / PS21 requirement | How AetherClose satisfies it |
+| EchoSphere / PS21 requirement | How MolVaani satisfies it |
 |---|---|
 | Agora Conversational AI is mandatory and central | Customer joins an Agora RTC channel; the **business server** starts an Agora Conversational AI agent into the same channel via `agora-agents` `session.start()` / `agents.stop()` |
 | Not a voice-enabled chatbot | Audio never leaves Agora’s SDRTN. Browser has no LLM. Server never touches PCM |

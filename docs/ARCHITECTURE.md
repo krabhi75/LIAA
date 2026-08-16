@@ -2,7 +2,7 @@
 
 EchoSphere requires an architecture diagram. Use these together:
 
-- System: [AetherClose architecture](https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj)
+- System: [MolVaani architecture](https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj)
 - Call flow: [PS21 live call sequence](https://whimsical.com/aetherclose-ps21-live-call-flow-GJmAnfXzaDjsPyvPWAfoxQ)
 - Requirement map: [EchoSphere coverage](https://whimsical.com/aetherclose-echosphere-requirement-map-LbwERus1kZJQMHqmwMf2Mu)
 
@@ -14,7 +14,7 @@ The browser never runs an LLM. The server never sees PCM. The buyer and Maya mee
 flowchart LR
   Buyer -->|mic| RTC[Agora RTC]
   RTC -->|voice| Buyer
-  Desk[AetherClose desk] -->|token invite stop| API[Next.js API]
+  Desk[MolVaani desk] -->|token invite stop| API[Next.js API]
   Desk -->|uid 1002| RTC
   Desk -->|transcripts| RTM[Agora RTM]
   Human[Human AE] -->|uid 2002| RTC

@@ -1,10 +1,41 @@
 # Commudle / EchoSphere paste copy
 
-Use this on Project Details and later on the 4 Sep submission.
+Use this on **Project Details**. Track: Adaptive AI Sales and Negotiation Agent. Problem: **PS21**.
 
-## Project name
+## Title
 
-AetherClose
+MolVaani — Voice that closes the sauda
+
+## Description
+
+MolVaani (मोलवाणी) is a live Agora Conversational AI sales agent built for how Indian buyers actually talk: interrupt, bargain, switch from pricing to competitor to seats, then ask for a demo.
+
+Mol = the sauda — price, seats, objections. Vaani = spoken voice. Maya, the agent, qualifies on a real Agora RTC call, not a script and not a chatbot with speech bolted on. The buyer can barge in. MolVaani remembers what was said, retrieves pricing and catalog, compares Slack or Teams, writes a CRM lead, and either books an IST demo or warm-transfers a human specialist with full conversation context.
+
+Agora is the real-time voice layer (turn-taking, interruption, STT/LLM/TTS). Our server only issues tokens, starts and stops the agent, and serves tools. Audio never leaves Agora.
+
+Live path we show: pricing first → interrupt for competitor → change seat count → enterprise demo → CRM outcome or human handoff.
+
+GitHub: https://github.com/krabhi75/aetherclose
+
+## Image gallery
+
+Upload these five files from `docs/gallery/` (order matters):
+
+1. `01-title-molvaani.png` — title card
+2. `02-live-desk.png` — live call + CRM
+3. `03-human-handoff.png` — specialist warm transfer
+4. `04-architecture.png` — Agora-central architecture
+5. `05-call-flow.png` — PS21 mol-bhav call path
+
+Also attach Whimsical links if the form allows extra URLs:
+
+- Architecture: https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj
+- Call sequence: https://whimsical.com/aetherclose-ps21-live-call-flow-GJmAnfXzaDjsPyvPWAfoxQ
+
+## Tags
+
+MolVaani, मोलवाणी, Agora, Conversational AI, Voice AI, Sales Agent, Negotiation, Mol-bhav, Bharat, India, EchoSphere, PS21, Real-time, RTC, CRM, Human Handoff, Adaptive AI
 
 ## Track
 
@@ -16,15 +47,7 @@ PS21
 
 ## One-liner
 
-A live Agora voice sales agent that qualifies a buyer, adapts when they interrupt or change requirements, and closes the call with a CRM lead plus a booked demo or a human handoff.
-
-## Project description
-
-AetherClose is a real-time voice AI sales agent built on Agora Conversational AI. It runs a live qualification and negotiation call, not a scripted pitch. The buyer can interrupt, change seat count, compare competitors, or return to pricing, and the agent adapts using session memory.
-
-During the call the agent retrieves product, pricing, and availability, handles pricing/trust/product objections, writes a CRM lead, and either books a demo or escalates to a human with full conversation context. Agora is the real-time voice layer for turn-taking and interruption handling. LLMs and tools sit behind it for reasoning and actions.
-
-This is not a chatbot with speech-to-text and text-to-speech wrapped around a form. The customer and the agent share an Agora RTC channel. The business server only issues tokens, starts and stops the agent, and serves MCP tools.
+A live Agora voice sales agent that bargains like an Indian sauda — interrupt, change seats, compare competitors — then closes with a CRM lead, an IST demo, or a human handoff.
 
 ## What we demonstrate live
 

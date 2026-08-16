@@ -46,7 +46,7 @@ This is not a chatbot with speech-to-text and text-to-speech wrapped around a fo
 
 - Architecture: https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj
 - Call sequence: https://whimsical.com/aetherclose-ps21-live-call-flow-GJmAnfXzaDjsPyvPWAfoxQ
-- Repo: (add GitHub URL after you push)
+- Repo: https://github.com/krabhi75/aetherclose
 - Live demo: http://localhost:3000 during evaluation; Cloudflare tunnel for MCP
 - Demo video: (add 3–5 min recording URL)
 

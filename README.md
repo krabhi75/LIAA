@@ -4,6 +4,8 @@ EchoSphere (Knotic × Agora) · Track **Adaptive AI Sales and Negotiation Agent*
 
 Live voice sales agent on **Agora Conversational AI**. Not a chatbot with STT/TTS bolted on.
 
+**GitHub:** https://github.com/krabhi75/aetherclose
+
 ## Submission checklist
 
 EchoSphere asks for: working prototype, source repo, README, architecture diagram, 3–5 min demo video, live demo, tech list, known limitations.

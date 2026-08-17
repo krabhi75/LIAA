@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { snapshot } from "@/lib/store";
+import { hydrateSession } from "@/lib/store";
 import { PLANS, upcomingSlots } from "@/lib/catalog";
 import { dealEconomics, winProbability } from "@/lib/metrics";
 
@@ -8,7 +8,7 @@ export async function GET(
   context: { params: Promise<{ channel: string }> },
 ) {
   const { channel } = await context.params;
-  const session = snapshot(channel);
+  const session = await hydrateSession(channel);
   const economics = dealEconomics(session.lead);
   return NextResponse.json({
     ...session,

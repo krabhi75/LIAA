@@ -46,6 +46,12 @@ export function AppShell({
           <NavItem href="/" active={active === "live"} label="Live call" />
           <NavItem href={humanHref} active={active === "human"} label="Human specialist" />
           <a
+            href="/app"
+            className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+          >
+            MolVaani Cloud
+          </a>
+          <a
             href="https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj"
             target="_blank"
             rel="noreferrer"

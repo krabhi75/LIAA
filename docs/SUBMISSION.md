@@ -70,7 +70,7 @@ A live Agora voice sales agent that bargains like an Indian sauda — interrupt,
 - Architecture: https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj
 - Call sequence: https://whimsical.com/aetherclose-ps21-live-call-flow-GJmAnfXzaDjsPyvPWAfoxQ
 - Repo: https://github.com/krabhi75/aetherclose
-- Live demo: http://localhost:3000 during evaluation; Cloudflare tunnel for MCP
+- Live demo: http://localhost:3000/demo during evaluation; SaaS console at /app; Cloudflare tunnel for MCP
 - Demo video: (add 3–5 min recording URL)
 
 ## Team

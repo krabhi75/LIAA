@@ -43,8 +43,14 @@ const PLAYBOOK = [
   },
 ] as const;
 
-export function MolVaaniDesk({ channel }: { channel: string }) {
-  const call = useAetherCall(channel, CUSTOMER_UID);
+export function MolVaaniDesk({
+  channel,
+  agentConfigId,
+}: {
+  channel: string;
+  agentConfigId?: string;
+}) {
+  const call = useAetherCall(channel, CUSTOMER_UID, { agentConfigId });
   const now = useNow(1000);
   const lead = call.session?.lead;
   const tools = call.session?.tools ?? [];

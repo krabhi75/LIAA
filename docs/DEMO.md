@@ -2,7 +2,7 @@
 
 EchoSphere requires a 3–5 minute demo video **and** a live demo. Do not submit a prerecord-only walkthrough as the judging demo.
 
-Record the screen at http://localhost:3000 with system audio + mic.
+Record the screen at http://localhost:3000/demo with system audio + mic.
 
 | Time | What to show | What to say |
 |---|---|---|

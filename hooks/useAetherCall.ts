@@ -113,9 +113,10 @@ function mapTranscript(
 export function useAetherCall(
   channel: string,
   uid: number,
-  options: { inviteAgent?: boolean } = {},
+  options: { inviteAgent?: boolean; agentConfigId?: string } = {},
 ) {
   const inviteAgent = options.inviteAgent !== false;
+  const agentConfigId = options.agentConfigId;
   const rtcRef = useRef<RtcHandle | null>(null);
   const micRef = useRef<MicHandle | null>(null);
   const remoteAudioRef = useRef<AudioLevelHandle | null>(null);
@@ -249,7 +250,7 @@ export function useAetherCall(
       ai.subscribeMessage(channel);
 
       if (inviteAgent) {
-        const invite = await api.invite(channel);
+        const invite = await api.invite(channel, agentConfigId);
         agentIdRef.current = invite.agentId;
         setMcpAttached(invite.mcpAttached);
       }
@@ -260,7 +261,7 @@ export function useAetherCall(
     } finally {
       setConnecting(false);
     }
-  }, [channel, uid, inviteAgent, cleanupMedia]);
+  }, [channel, uid, inviteAgent, agentConfigId, cleanupMedia]);
 
   const stop = useCallback(async () => {
     try {

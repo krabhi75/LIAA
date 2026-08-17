@@ -28,8 +28,11 @@ export type InviteResponse = {
 export const api = {
   token: (channel: string, uid: number) =>
     post<TokenResponse>("/api/token", { channel, uid }),
-  invite: (channel: string) =>
-    post<InviteResponse>("/api/invite-agent", { channel }),
+  invite: (channel: string, agentConfigId?: string) =>
+    post<InviteResponse>("/api/invite-agent", {
+      channel,
+      ...(agentConfigId ? { agentConfigId } : {}),
+    }),
   stop: (agentId: string, channel?: string) =>
     post<{ stopped: boolean }>("/api/stop-conversation", { agentId, channel }),
   session: async (channel: string) => {

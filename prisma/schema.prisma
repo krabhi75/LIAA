@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+}
+
+model Organization {
+  id               String        @id @default(cuid())
+  name             String
+  slug             String        @unique
+  plan             String        @default("free")
+  stripeCustomerId String?
+  createdAt        DateTime      @default(now())
+  memberships      Membership[]
+  workspaces       Workspace[]
+  usageEvents      UsageEvent[]
+  leads            Lead[]
+}
+
+model Membership {
+  id        String       @id @default(cuid())
+  role      String       @default("owner")
+  userId    String
+  orgId     String
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+model Workspace {
+  id        String        @id @default(cuid())
+  name      String
+  orgId     String
+  createdAt DateTime      @default(now())
+  org       Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  agents    AgentConfig[]
+}
+
+model AgentConfig {
+  id              String         @id @default(cuid())
+  workspaceId     String
+  name            String
+  slug            String
+  greeting        String
+  systemPrompt    String
+  failureMessage  String
+  sttModel        String         @default("nova-3")
+  llmModel        String         @default("gpt-4o-mini")
+  ttsModel        String         @default("speech-2.6-turbo")
+  ttsVoiceId      String         @default("English_captivating_female1")
+  idleTimeout     Int            @default(180)
+  enabled         Boolean        @default(true)
+  mcpKey          String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  workspace       Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessions        VoiceSession[]
+
+  @@unique([workspaceId, slug])
+}
+
+model VoiceSession {
+  id            String       @id @default(cuid())
+  channel       String       @unique
+  agoraAgentId  String?
+  status        String       @default("active")
+  orgId         String?
+  agentConfigId String?
+  leadJson      String       @default("{}")
+  meetingsJson  String       @default("[]")
+  toolsJson     String       @default("[]")
+  escalationJson String?
+  createdAt     DateTime     @default(now())
+  endedAt       DateTime?
+  agentConfig   AgentConfig? @relation(fields: [agentConfigId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([agoraAgentId])
+}
+
+model Lead {
+  id          String       @id @default(cuid())
+  orgId       String
+  channel     String
+  name        String?
+  company     String?
+  role        String?
+  email       String?
+  seats       Int?
+  planId      String?
+  competitor  String?
+  objections  String       @default("[]")
+  timeline    String?
+  notes       String       @default("")
+  status      String       @default("new")
+  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime     @default(now())
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, channel])
+  @@index([orgId, status])
+}
+
+model UsageEvent {
+  id        String       @id @default(cuid())
+  orgId     String
+  kind      String
+  quantity  Float        @default(1)
+  metaJson  String       @default("{}")
+  createdAt DateTime     @default(now())
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+}

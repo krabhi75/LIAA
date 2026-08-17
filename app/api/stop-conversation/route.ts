@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { AgoraError, generateConvoAIToken } from "agora-agents";
 import { agoraClient, appCertificate, appId } from "@/lib/agora";
 import { AGENT_UID } from "@/lib/ids";
-import { clearAgentId, findChannelByAgentId } from "@/lib/store";
+import {
+  clearAgentId,
+  endSession,
+  findChannelByAgentId,
+  findChannelByAgentIdAsync,
+} from "@/lib/store";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +18,8 @@ export async function POST(req: NextRequest) {
 
     const channel =
       (typeof channelFromBody === "string" && channelFromBody) ||
-      findChannelByAgentId(agentId);
+      findChannelByAgentId(agentId) ||
+      (await findChannelByAgentIdAsync(agentId));
     if (!channel) {
       return NextResponse.json(
         { error: "channel required to stop the agent" },
@@ -33,6 +39,7 @@ export async function POST(req: NextRequest) {
       { headers: { Authorization: `agora token=${token}` } },
     );
     clearAgentId(channel);
+    endSession(channel);
     return NextResponse.json({ stopped: true });
   } catch (err: unknown) {
     if (err instanceof AgoraError && err.statusCode === 404) {

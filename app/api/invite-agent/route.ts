@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     const agent = new Agent({
       client: agoraClient(),
-      turnDetection: { language: "en-US" },
+      turnDetection: { language: "hi-IN" },
       interruption: { enable: true, mode: InterruptionModeStartOfSpeech },
       advancedFeatures: {
         enable_rtm: true,
@@ -117,14 +117,18 @@ export async function POST(req: NextRequest) {
       .withStt(
         new DeepgramSTT({
           model: config.sttModel || "nova-3",
-          language: "en-US",
+          language: "hi",
         } as ConstructorParameters<typeof DeepgramSTT>[0]),
       )
       .withLlm(llm)
       .withTts(
         new MiniMaxTTS({
           model: config.ttsModel || "speech-2.6-turbo",
-          voiceId: config.ttsVoiceId || "English_captivating_female1",
+          // Hindi-capable female voice when available on managed MiniMax
+          voiceId:
+            config.ttsVoiceId ||
+            process.env.NOVA_TTS_VOICE ||
+            "English_captivating_female1",
         } as ConstructorParameters<typeof MiniMaxTTS>[0]),
       )
       .withTools(mcpAttached);

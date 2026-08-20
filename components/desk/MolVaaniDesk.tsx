@@ -260,14 +260,15 @@ export function MolVaaniDesk({
         <div className="nova-panel-head">
           <div>
             <div className="nova-label-hi">Live transcript</div>
-            <span className="nova-label">English · realtime</span>
+            <span className="nova-label">Hindi · Hinglish · realtime</span>
           </div>
           {call.connected ? <span className="nova-live-pill">Live</span> : null}
         </div>
         {call.transcripts.length === 0 ? (
           <p className="nova-empty">
-            Nothing yet. Turn on the mic and talk — ask about your day, book a
-            meeting, or read mail. Transcript appears here in realtime.
+            Nothing yet. Turn on the mic and speak in Hindi or Hinglish — ask about
+            your day, book a meeting, or read mail. Transcript appears here in
+            realtime.
           </p>
         ) : (
           call.transcripts.map((line, i) => (

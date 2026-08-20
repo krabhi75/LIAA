@@ -43,8 +43,8 @@ flowchart TB
   Desk -->|token invite stop| API[Next.js API]
   API -->|session.start| CAI[Conversational AI Engine]
   CAI -->|agent uid 123456| RTC
-  CAI --> STT[Deepgram STT en]
-  STT --> LLM[GPT-4o-mini]
+  CAI --> STT[Deepgram STT hi]
+  STT --> LLM[GPT-4o-mini Hindi Hinglish]
   LLM -->|MCP tools| MCP["/api/mcp"]
   MCP --> Tools[calendar mail tab memory]
   LLM --> TTS[MiniMax TTS]
@@ -63,8 +63,8 @@ flowchart TB
 |---|---|
 | Mic capture, playback, channel | Agora RTC SDK in the browser |
 | Turn-taking, barge-in | Conversational AI Engine |
-| Speech-to-text | Deepgram via Agora (`language: en`) |
-| Reasoning | OpenAI GPT-4o-mini via Agora LLM adapter |
+| Speech-to-text | Deepgram via Agora (`language: hi`) |
+| Reasoning | OpenAI GPT-4o-mini via Agora LLM adapter (Hindi / Hinglish replies) |
 | Text-to-speech | MiniMax via Agora TTS adapter |
 | Tool calls | MCP server at `PUBLIC_BASE_URL/api/mcp` |
 | Tokens / start / stop | Our Next.js routes only |
@@ -98,12 +98,14 @@ We intentionally **do not** pipe voice through a custom Groq / OpenAI-compat cal
 
 `app/api/invite-agent/route.ts` builds an Agora `Agent` with:
 
-- `turnDetection.language`: `en-US`  
-- `DeepgramSTT`: model `nova-3`, language `en`  
-- LLM: OpenAI-compatible GPT-4o-mini + system prompt from `buildLiaaSystemPrompt`  
-- `MiniMaxTTS`: English female voice  
+- `turnDetection.language`: `hi-IN`  
+- `DeepgramSTT`: model `nova-3`, language `hi`  
+- LLM: OpenAI-compatible GPT-4o-mini + system prompt from `buildLiaaSystemPrompt` (speak Hindi / Hinglish)  
+- `MiniMaxTTS`: voice id configurable (`LIAA_TTS_VOICE`)  
 - MCP servers registered when `PUBLIC_BASE_URL` is a **public HTTPS** URL (not localhost)  
-- Greeting from `liaaGreeting()` (“Hi. Liaa is ready…”)
+- Greeting from `liaaGreeting()` (Hindi: “नमस्ते। Liaa तैयार है…”)
+
+**Language split:** desk chrome (buttons, labels, status) is **English**; spoken conversation and transcripts are **Hindi / Hinglish**.
 
 ### 4.3 Tools (MCP)
 
@@ -121,7 +123,7 @@ Definitions: `lib/tools.ts` · served by `app/api/mcp/route.ts` · cards recorde
 
 | Export | File | Purpose |
 |---|---|---|
-| `LIAA_INSTRUCTIONS` | `lib/prompt.ts` | Persona: English, short spoken replies, tool discipline |
+| `LIAA_INSTRUCTIONS` | `lib/prompt.ts` | Persona: Hindi/Hinglish speech; English desk chrome |
 | `buildLiaaSystemPrompt` | `lib/tools.ts` | Per-channel time, site, memory, recent ids |
 | `GREETING` / `liaaGreeting` | `lib/prompt.ts` | First spoken line |
 
@@ -149,8 +151,8 @@ Each browser tab gets a unique **channel** string (`useClientChannel`) so sessio
 3. POST /api/token → RTC (+ RTM) tokens
 4. Client joins Agora RTC, publishes mic
 5. POST /api/invite-agent → Agent.createSession().start()
-6. Liaa greets in English on the channel
-7. User speaks → Deepgram → LLM → optional MCP tool(s) → MiniMax → audio
+6. Liaa greets in Hindi on the channel
+7. User speaks (Hindi/Hinglish) → Deepgram → LLM → optional MCP tool(s) → MiniMax → audio
 8. RTM transcripts stream to desk; tool cards appear in Actions
 9. Stop conversation → agent stop + leave channel
 ```
@@ -239,7 +241,7 @@ Auth/console routes under `/app/*` redirect or stub toward the public desk for t
 | Demo calendar/mail | Fast, reliable for judging | Not production Google |
 | Public `/demo` without login | Frictionless live demo | No multi-tenant auth on the desk |
 | Cloudflare tunnel for MCP | Agora cloud → tools | Tunnel URL changes when restarted |
-| English UI + English STT | Clear for mixed judges | Hindi mode removed from default |
+| English UI + Hindi/Hinglish voice | Clear chrome for judges; natural conversation for Bharat demos | Transcript may mix scripts |
 | Linked action chains in UI | Shows multi-function clearly | Grouping is time-window heuristic (~12s) |
 
 ---
@@ -265,13 +267,13 @@ cloudflared tunnel --url http://localhost:3000
 # paste HTTPS URL into .env.local PUBLIC_BASE_URL, restart next
 ```
 
-Open **http://localhost:3000/demo** → **Start conversation** → allow mic → speak English.
+Open **http://localhost:3000/demo** → **Start conversation** → allow mic → speak Hindi or Hinglish.
 
 Suggested spoken beats:
 
-1. “What does my day look like?”  
-2. “Book a meeting with Rahul tomorrow at four.”  
-3. “What’s in my inbox?” / “Remember my name is …”  
+1. “आज का दिन कैसा दिखता है?” / “What does my day look like?”  
+2. “Rahul से कल चार बजे meeting book करो.”  
+3. “Inbox में क्या है?” / “Remember my name is …”  
 
 ---
 
@@ -285,4 +287,4 @@ Suggested spoken beats:
 
 ---
 
-*Last updated for agent identity **Liaa**, English desk, and Agora-central tool architecture.*
+*Last updated for agent identity **Liaa**, English desk chrome, Hindi/Hinglish conversation, and Agora-central tool architecture.*

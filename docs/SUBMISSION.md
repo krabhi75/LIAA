@@ -12,7 +12,7 @@ Liaa is a live **Agora Conversational AI** personal assistant: calendar, mail, t
 
 The browser joins an Agora RTC channel. The Conversational AI Engine owns turn-taking, barge-in, STT, LLM, and TTS. Our Next.js server only mints tokens, starts and stops the agent, and serves MCP tools. Audio never leaves Agora for a custom LLM voice loop.
 
-Live path we show: **Start conversation** → English greeting → ask about the day → book a meeting → inbox or remember → **linked action cards** update in realtime → **Stop conversation**.
+Live path we show: **Start conversation** → Hindi greeting → ask about the day (Hinglish) → book a meeting → inbox or remember → **linked action cards** (English chrome) update in realtime → **Stop conversation**.
 
 UI layout adapted from https://github.com/vaivikop/nova-agora — voice remains Agora Conversational AI. Agent name: **Liaa**.
 

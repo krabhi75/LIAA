@@ -30,13 +30,13 @@ export function SaasShell({
   subtitle?: string;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#f4f6f8]">
-      <aside className="flex w-56 shrink-0 flex-col bg-slate-900 text-slate-300">
-        <div className="border-b border-white/10 px-5 py-5">
-          <Link href="/app" className="text-sm font-semibold text-white">
-            MolVaani Cloud
+    <div className="saas-paper flex min-h-screen">
+      <aside className="flex w-56 shrink-0 flex-col border-r border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]">
+        <div className="border-b border-[var(--line)] px-5 py-5">
+          <Link href="/app" className="nova-mark text-[var(--ink)]">
+            MOLVAANI
           </Link>
-          <div className="mt-1 truncate text-[11px] text-slate-400">
+          <div className="mt-1 truncate text-[11px] text-[var(--ink-3)]">
             {user.orgName}
           </div>
         </div>
@@ -45,26 +45,26 @@ export function SaasShell({
             <Link
               key={item.href}
               href={item.href}
-              className="block rounded-md px-3 py-2 text-sm hover:bg-white/5 hover:text-white"
+              className="block rounded-[var(--radius)] px-3 py-2 text-sm hover:bg-[var(--sunk)]"
             >
               {item.label}
             </Link>
           ))}
           <Link
             href="/demo"
-            className="block rounded-md px-3 py-2 text-sm text-emerald-400 hover:bg-white/5"
+            className="block rounded-[var(--radius)] px-3 py-2 text-sm text-[var(--nova)] hover:bg-[var(--nova-soft)]"
           >
             Public demo desk
           </Link>
         </nav>
-        <div className="border-t border-white/10 px-4 py-4 text-xs">
-          <div className="truncate text-white">{user.email}</div>
-          <div className="mt-1 capitalize text-slate-500">
+        <div className="border-t border-[var(--line)] px-4 py-4 text-xs">
+          <div className="truncate text-[var(--ink)]">{user.email}</div>
+          <div className="mt-1 capitalize text-[var(--ink-3)]">
             {user.plan} · {user.role}
           </div>
           <button
             type="button"
-            className="mt-3 text-slate-400 hover:text-white"
+            className="mt-3 text-[var(--ink-3)] hover:text-[var(--ink)]"
             onClick={async () => {
               await fetch("/api/auth/logout", { method: "POST" });
               window.location.href = "/login";
@@ -75,18 +75,15 @@ export function SaasShell({
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-6">
+        <header className="flex h-[52px] items-center justify-between border-b border-[var(--line)] bg-[var(--surface)] px-6">
           <div>
-            <h1 className="text-sm font-semibold text-slate-900">{title}</h1>
+            <h1 className="text-sm font-semibold text-[var(--ink)]">{title}</h1>
             {subtitle ? (
-              <p className="text-xs text-slate-500">{subtitle}</p>
+              <p className="text-xs text-[var(--ink-3)]">{subtitle}</p>
             ) : null}
           </div>
-          <Link
-            href="/app/live"
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-          >
-            Start live call
+          <Link href="/app/live" className="nova-btn nova-btn--primary" style={{ padding: "7px 14px", fontSize: 13 }}>
+            Wake live call
           </Link>
         </header>
         <main className="flex-1 overflow-auto p-6">{children}</main>

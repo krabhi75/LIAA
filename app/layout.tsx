@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import "./nova.css";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -13,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MolVaani — Voice revenue desk",
+  title: "MolVaani — Agora voice that closes the sauda",
   description:
-    "Live Agora Conversational AI sales desk for Indian buyers: qualification, mol-bhav, CRM, and human escalation.",
+    "Live Agora Conversational AI sales desk: barge-in, tools, CRM, and human escalation.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

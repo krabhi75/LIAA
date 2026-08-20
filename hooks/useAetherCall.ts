@@ -123,6 +123,9 @@ export function useAetherCall(
   const rtmRef = useRef<RtmHandle | null>(null);
   const agentIdRef = useRef<string | null>(null);
   const speakingRef = useRef(false);
+  const statsClientRef = useRef<{ getRTCStats?: () => { RTT?: number } } | null>(
+    null,
+  );
 
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -132,6 +135,7 @@ export function useAetherCall(
   const [mcpAttached, setMcpAttached] = useState(false);
   const [session, setSession] = useState<SessionView | null>(null);
   const [remoteUsers, setRemoteUsers] = useState<string[]>([]);
+  const [rttMs, setRttMs] = useState<number | null>(null);
   const [telemetry, setTelemetry] = useState<CallTelemetry>({
     startedAt: 0,
     elapsedMs: 0,
@@ -153,6 +157,7 @@ export function useAetherCall(
     await rtcRef.current?.leave().catch(() => undefined);
     await rtmRef.current?.logout().catch(() => undefined);
     rtcRef.current = null;
+    statsClientRef.current = null;
     micRef.current = null;
     remoteAudioRef.current = null;
     rtmRef.current = null;
@@ -221,6 +226,9 @@ export function useAetherCall(
       });
       await rtc.publish(mic);
       rtcRef.current = rtc as unknown as RtcHandle;
+      statsClientRef.current = rtc as unknown as {
+        getRTCStats?: () => { RTT?: number };
+      };
       micRef.current = mic;
 
       const rtm = new RTMClient(appId, String(uid), { useStringUserId: false });
@@ -315,6 +323,18 @@ export function useAetherCall(
   }, [connected]);
 
   useEffect(() => {
+    if (!connected) {
+      setRttMs(null);
+      return;
+    }
+    const id = window.setInterval(() => {
+      const rtt = statsClientRef.current?.getRTCStats?.()?.RTT;
+      setRttMs(typeof rtt === "number" && rtt > 0 ? rtt : null);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [connected]);
+
+  useEffect(() => {
     const onUnload = () => {
       if (agentIdRef.current) {
         void api.stop(agentIdRef.current, channel);
@@ -334,6 +354,7 @@ export function useAetherCall(
     session,
     remoteUsers,
     telemetry,
+    rttMs,
     start,
     stop,
   };

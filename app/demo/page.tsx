@@ -8,8 +8,9 @@ export default function DemoDeskPage() {
 
   if (!channel) {
     return (
-      <div className="grid min-h-screen place-items-center text-sm text-slate-500">
-        Opening the revenue desk…
+      <div className="nova-gate">
+        <div className="nova-gate__mark">MOLVAANI</div>
+        <p className="nova-label">opening desk</p>
       </div>
     );
   }

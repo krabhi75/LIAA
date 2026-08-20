@@ -1,0 +1,471 @@
+/* Nova-inspired instrument UI — warm paper, hairlines, one live accent. */
+
+:root {
+  --paper: #f7f6f3;
+  --surface: #ffffff;
+  --sunk: #f2f0ec;
+  --line: #e3ded7;
+  --line-soft: #efece7;
+
+  --ink: #14120f;
+  --ink-2: #4a453e;
+  --ink-3: #8a837a;
+  --ink-4: #b8b1a7;
+
+  --nova: #0b63d6;
+  --nova-soft: #eaf1fd;
+  --agora: #099dfd;
+  --live: #0c7a56;
+  --alert: #b01243;
+
+  --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  --radius: 8px;
+  color-scheme: light;
+}
+
+.nova-app {
+  height: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 52px 1fr;
+  grid-template-columns: 300px 1fr 340px;
+  grid-template-areas: "bar bar bar" "transcript stage log";
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  overflow: hidden;
+}
+
+.nova-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.nova-bar {
+  grid-area: bar;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.nova-mark {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+}
+
+.nova-bar__spacer {
+  flex: 1;
+}
+
+.nova-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.nova-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+
+.nova-dot--on {
+  color: var(--ink-2);
+}
+
+.nova-dot--on::before {
+  background: var(--live);
+}
+
+.nova-dot--warn::before {
+  background: var(--alert);
+}
+
+.nova-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.nova-btn:hover {
+  border-color: var(--ink-4);
+}
+
+.nova-btn--primary {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  padding: 12px 26px;
+  font-size: 15px;
+}
+
+.nova-btn--primary:hover {
+  background: #000;
+}
+
+.nova-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.nova-stage-wrap {
+  grid-area: stage;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  position: relative;
+}
+
+.nova-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  position: relative;
+}
+
+.nova-orb {
+  width: min(52vh, 420px);
+  height: min(52vh, 420px);
+  display: block;
+}
+
+.nova-tick {
+  stroke: var(--ink-4);
+  stroke-width: 1;
+}
+
+.nova-tick--major {
+  stroke: var(--ink-3);
+}
+
+.nova-ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.nova-ring--outer {
+  stroke: var(--ink-4);
+  stroke-dasharray: 3 9;
+  opacity: 0.7;
+}
+
+.nova-wave {
+  fill: none;
+  stroke: var(--nova);
+  stroke-width: 1.25;
+  opacity: 0;
+}
+
+.nova-core {
+  fill: var(--ink);
+}
+
+.nova-core--live {
+  fill: var(--nova);
+}
+
+.nova-stage.is-thinking .nova-ring--outer {
+  animation: nova-spin 5.5s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes nova-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nova-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 20px;
+}
+
+.nova-state__text {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.nova-stage.is-listening .nova-state__text,
+.nova-stage.is-speaking .nova-state__text,
+.nova-stage.is-thinking .nova-state__text {
+  color: var(--nova);
+}
+
+.nova-agora {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nova-agora__mark {
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--agora);
+}
+
+.nova-agora__live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+
+.nova-agora--on .nova-agora__live {
+  background: var(--agora);
+  animation: nova-pulse 2s ease-in-out infinite;
+}
+
+@keyframes nova-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.nova-agora__v {
+  color: var(--ink-2);
+}
+
+.nova-transcript {
+  grid-area: transcript;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nova-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nova-turn__who {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-4);
+}
+
+.nova-turn--maya .nova-turn__who {
+  color: var(--nova);
+}
+
+.nova-turn__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.nova-turn--maya .nova-turn__text {
+  color: var(--ink);
+}
+
+.nova-turn--partial .nova-turn__text {
+  color: var(--ink-3);
+}
+
+.nova-log {
+  grid-area: log;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nova-log__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.nova-card {
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--nova);
+  border-radius: var(--radius);
+  padding: 11px 13px;
+  background: var(--surface);
+  animation: nova-land 220ms ease-out;
+}
+
+@keyframes nova-land {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.nova-card--flash {
+  background: var(--nova-soft);
+}
+
+.nova-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.nova-card__verb {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nova);
+}
+
+.nova-card__kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.nova-card__title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.nova-card__detail {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+  margin-top: 3px;
+}
+
+.nova-empty {
+  font-size: 13px;
+  color: var(--ink-4);
+  line-height: 1.6;
+}
+
+.nova-gate {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 10;
+  text-align: center;
+  padding: 24px;
+}
+
+.nova-gate__mark {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+}
+
+.nova-gate__sub {
+  color: var(--ink-3);
+  font-size: 14px;
+  max-width: 42ch;
+  line-height: 1.6;
+}
+
+.nova-gate__row {
+  display: flex;
+  gap: 20px;
+  margin-top: 4px;
+}
+
+.nova-gate__err {
+  color: var(--alert);
+  font-size: 13px;
+  max-width: 48ch;
+}
+
+.nova-hidden {
+  display: none !important;
+}
+
+@media (max-width: 960px) {
+  .nova-app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 52px auto 1fr auto;
+    grid-template-areas: "bar" "stage" "transcript" "log";
+    overflow: auto;
+  }
+
+  .nova-transcript,
+  .nova-log {
+    border: none;
+    border-top: 1px solid var(--line);
+    max-height: 40vh;
+  }
+
+  .nova-orb {
+    width: min(40vh, 280px);
+    height: min(40vh, 280px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-stage.is-thinking .nova-ring--outer {
+    animation: none;
+  }
+  .nova-card {
+    animation: none;
+  }
+}
+
+/* SaaS surfaces share the paper palette */
+.saas-paper {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+}

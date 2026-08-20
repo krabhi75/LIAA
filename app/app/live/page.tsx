@@ -22,8 +22,9 @@ export default function AppLivePage() {
 
   if (!ready || !channel) {
     return (
-      <div className="grid min-h-screen place-items-center text-sm text-slate-500">
-        Opening authenticated desk…
+      <div className="nova-gate">
+        <div className="nova-gate__mark">MOLVAANI</div>
+        <p className="nova-label">opening authenticated desk</p>
       </div>
     );
   }

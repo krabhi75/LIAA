@@ -14,7 +14,9 @@ Mol = the sauda — price, seats, objections. Vaani = spoken voice. Maya, the ag
 
 Agora is the real-time voice layer (turn-taking, interruption, STT/LLM/TTS). Our server only issues tokens, starts and stops the agent, and serves tools. Audio never leaves Agora.
 
-Live path we show: pricing first → interrupt for competitor → change seat count → enterprise demo → CRM outcome or human handoff.
+Live path we show: Nova-style desk (transcript · orb · actions) → pricing first → interrupt for competitor → change seat count → enterprise demo → CRM outcome or human handoff.
+
+UI layout adapted from https://github.com/vaivikop/nova-agora — voice remains Agora Conversational AI.
 
 GitHub: https://github.com/krabhi75/aetherclose
 

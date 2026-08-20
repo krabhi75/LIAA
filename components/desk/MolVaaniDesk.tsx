@@ -1,47 +1,67 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAetherCall } from "@/hooks/useAetherCall";
-import { useNow } from "@/hooks/useNow";
 import { CUSTOMER_UID } from "@/lib/ids";
-import {
-  dealEconomics,
-  formatDuration,
-  formatInr,
-  formatIst,
-  formatUsd,
-  stageLabel,
-  winProbability,
-} from "@/lib/metrics";
-import { FlashValue, LiveMoney, Waveform } from "./primitives";
-import { AppShell } from "./AppShell";
+import { NovaOrb } from "./NovaOrb";
 
-const PLAYBOOK = [
-  {
-    id: "pricing",
-    label: "Ask pricing first",
-    hint: "Pehle rate / per user",
-    test: /pric|kitna|cost|per user|rate|usd|dollar/i,
+const TOOL_CARD: Record<
+  string,
+  { verb: string; kind: string; title: (out: unknown) => string; detail?: (out: unknown) => string }
+> = {
+  get_pricing: {
+    verb: "Priced",
+    kind: "catalog",
+    title: (o) => {
+      const r = o as { recommended_plan?: string; seats?: number };
+      return `${r.recommended_plan ?? "Plan"} · ${r.seats ?? "?"} seats`;
+    },
+    detail: (o) => {
+      const r = o as { estimated_monthly_usd?: number };
+      return r.estimated_monthly_usd != null
+        ? `≈ $${r.estimated_monthly_usd}/mo list`
+        : "";
+    },
   },
-  {
-    id: "interrupt",
-    label: "Interrupt with a competitor",
-    hint: "Slack / Teams / wait",
-    test: /slack|teams|asana|notion|wait|interrupt|alag/i,
+  compare_competitor: {
+    verb: "Compared",
+    kind: "objection",
+    title: (o) => `vs ${(o as { competitor?: string }).competitor ?? "competitor"}`,
   },
-  {
-    id: "seats",
-    label: "Change seat count",
-    hint: "Seats / users / 50",
-    test: /seat|users?|fifty|\b50\b|pachaas/i,
+  get_availability: {
+    verb: "Checked",
+    kind: "calendar",
+    title: () => "IST demo slots",
   },
-  {
-    id: "demo",
-    label: "Ask for an enterprise demo",
-    hint: "Demo / Thursday / IST",
-    test: /demo|enterprise|calendar|thursday|book/i,
+  upsert_crm_lead: {
+    verb: "CRM",
+    kind: "lead",
+    title: (o) => {
+      const r = o as { company?: string; name?: string; seats?: number };
+      return [r.company, r.name, r.seats ? `${r.seats} seats` : null]
+        .filter(Boolean)
+        .join(" · ") || "Lead updated";
+    },
   },
-] as const;
+  book_demo: {
+    verb: "Booked",
+    kind: "calendar",
+    title: (o) => (o as { label?: string }).label ?? "Demo booked",
+    detail: (o) => (o as { attendee?: string }).attendee ?? "",
+  },
+  escalate_to_human: {
+    verb: "Escalated",
+    kind: "handoff",
+    title: (o) => (o as { reason?: string }).reason ?? "Human requested",
+    detail: (o) => (o as { summary?: string }).summary ?? "",
+  },
+  get_lead: {
+    verb: "Read",
+    kind: "lead",
+    title: () => "CRM snapshot",
+  },
+};
 
 export function MolVaaniDesk({
   channel,
@@ -51,304 +71,261 @@ export function MolVaaniDesk({
   agentConfigId?: string;
 }) {
   const call = useAetherCall(channel, CUSTOMER_UID, { agentConfigId });
-  const now = useNow(1000);
-  const lead = call.session?.lead;
+  const [gateOpen, setGateOpen] = useState(true);
+  const [gateHint, setGateHint] = useState(
+    "MolVaani needs your microphone. Allow it once and the desk wakes itself from then on.",
+  );
+  const [booting, setBooting] = useState(true);
+  const [showWake, setShowWake] = useState(false);
+  const autoTried = useRef(false);
+  const transcriptRef = useRef<HTMLElement>(null);
+  const logRef = useRef<HTMLElement>(null);
+
   const tools = call.session?.tools ?? [];
-  const economics = dealEconomics(lead);
-  const win = winProbability(
-    lead,
-    tools,
-    call.transcripts.filter((l) => l.final).length,
-  );
-  const talkTotal = call.telemetry.agentTalkMs + call.telemetry.listenMs;
-  const agentShare =
-    call.connected && talkTotal > 0
-      ? call.telemetry.agentTalkMs / talkTotal
-      : 0;
-  const turns = call.transcripts.filter((l) => l.final).length;
-  const words = call.transcripts.reduce(
-    (n, l) => n + l.text.trim().split(/\s+/).filter(Boolean).length,
-    0,
-  );
-  const playbook = useMemo(
-    () =>
-      PLAYBOOK.map((step) => ({
-        ...step,
-        done: call.transcripts.some((line) => step.test.test(line.text)),
-      })),
-    [call.transcripts],
-  );
-  const scroller = useRef<HTMLDivElement>(null);
+  const lead = call.session?.lead;
+  const agentLive = call.remoteUsers.length > 0 || call.agentSpeaking;
+
+  const cards = useMemo(() => {
+    return [...tools].reverse().map((t, i) => {
+      const meta = TOOL_CARD[t.tool] ?? {
+        verb: "Tool",
+        kind: "mcp",
+        title: () => t.tool,
+      };
+      return {
+        key: `${t.at}-${t.tool}-${i}`,
+        verb: meta.verb,
+        kind: meta.kind,
+        title: meta.title(t.output),
+        detail: meta.detail?.(t.output) ?? "",
+        at: t.at,
+      };
+    });
+  }, [tools]);
 
   useEffect(() => {
-    const el = scroller.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    const el = transcriptRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [call.transcripts]);
 
-  const status = call.connected
-    ? call.agentSpeaking
-      ? "Maya speaking"
-      : "Listening"
-    : "Idle";
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [cards.length]);
+
+  useEffect(() => {
+    if (call.connected) {
+      setGateOpen(false);
+      setBooting(false);
+      setShowWake(false);
+    }
+  }, [call.connected]);
+
+  useEffect(() => {
+    if (call.error) {
+      setBooting(false);
+      setShowWake(true);
+      setGateOpen(true);
+    }
+  }, [call.error]);
+
+  useEffect(() => {
+    if (autoTried.current || !channel) return;
+    autoTried.current = true;
+    const manual = new URLSearchParams(window.location.search).has("manual");
+    if (manual) {
+      setBooting(false);
+      setShowWake(true);
+      return;
+    }
+    (async () => {
+      try {
+        const p = await navigator.permissions.query({
+          name: "microphone" as PermissionName,
+        });
+        if (p.state === "granted") {
+          setBooting(true);
+          await call.start();
+          return;
+        }
+        if (p.state === "denied") {
+          setGateHint(
+            "Microphone is blocked for this site. Allow it in the address bar, then reload.",
+          );
+        } else {
+          setGateHint(
+            "MolVaani needs your microphone. Allow it once and the desk wakes itself from then on.",
+          );
+        }
+      } catch {
+        setGateHint(
+          "MolVaani needs your microphone. Allow it once and the desk wakes itself from then on.",
+        );
+      }
+      setBooting(false);
+      setShowWake(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- wake once on mount
+  }, [channel]);
+
+  async function wake() {
+    setShowWake(false);
+    setBooting(true);
+    await call.start();
+    setBooting(false);
+    if (!call.error) setShowWake(false);
+  }
+
+  async function end() {
+    await call.stop();
+    setGateOpen(true);
+    setShowWake(true);
+    setBooting(false);
+    setGateHint("Session ended. Wake MolVaani again when you are ready.");
+  }
 
   return (
-    <AppShell
-      active="live"
-      channel={channel}
-      status={status}
-      duration={formatDuration(call.telemetry.elapsedMs)}
-      ist={formatIst(now)}
-      mcpAttached={call.mcpAttached}
-      connected={call.connected}
-      connecting={call.connecting}
-      onStart={call.start}
-      onStop={call.stop}
-      startDisabled={!channel}
-    >
-      <div className="space-y-4">
+    <div className="nova-app">
+      <header className="nova-bar">
+        <span className="nova-mark">MOLVAANI</span>
+        <span className={`nova-dot ${agentLive ? "nova-dot--on" : ""}`}>
+          {agentLive ? "agent live" : "agent"}
+        </span>
+        <span className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : "nova-dot--warn"}`}>
+          {call.mcpAttached ? "mcp live" : "mcp tunnel"}
+        </span>
+        <span className="nova-bar__spacer" />
         {call.error ? (
-          <p className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {call.error}
-          </p>
+          <span className="nova-dot nova-dot--warn">{call.error.slice(0, 70)}</span>
         ) : null}
+        <Link href="/app" className="nova-btn" style={{ textDecoration: "none" }}>
+          Cloud
+        </Link>
+        {call.connected ? (
+          <button type="button" className="nova-btn" onClick={end}>
+            End
+          </button>
+        ) : null}
+      </header>
 
-        <section className="panel">
-          <table className="sheet">
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-                <th>Detail</th>
-                <th>Metric</th>
-                <th>Value</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="text-slate-500">Annual contract</td>
-                <td className="num font-semibold">
-                  {economics.seats ? (
-                    <LiveMoney value={economics.arrUsd} format={(n) => formatUsd(n)} />
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="text-slate-500">
-                  {economics.seats ? formatInr(economics.arrInr) : "Awaiting seats"}
-                </td>
-                <td className="text-slate-500">Monthly run-rate</td>
-                <td className="num font-semibold">
-                  {economics.seats ? (
-                    <LiveMoney value={economics.monthlyUsd} format={(n) => formatUsd(n)} />
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="text-slate-500">
-                  <FlashValue value={economics.seats || null} /> seats
-                  {economics.plan ? ` · ${economics.plan.name}` : ""}
-                </td>
-              </tr>
-              <tr>
-                <td className="text-slate-500">Close probability</td>
-                <td className="num font-semibold">{win}%</td>
-                <td className="text-slate-500">From CRM + talk</td>
-                <td className="text-slate-500">Talk mix</td>
-                <td className="num font-semibold">{Math.round(agentShare * 100)}% Maya</td>
-                <td className="text-slate-500">
-                  {Math.round((1 - agentShare) * 100)}% buyer / listen
-                </td>
-              </tr>
-              <tr>
-                <td className="text-slate-500">Turns</td>
-                <td className="num font-semibold">
-                  <FlashValue value={turns} />
-                </td>
-                <td className="text-slate-500">Final transcript lines</td>
-                <td className="text-slate-500">Words / tools</td>
-                <td className="num font-semibold">
-                  <FlashValue value={words} /> / <FlashValue value={tools.length} />
-                </td>
-                <td className="text-slate-500">
-                  {call.remoteUsers.length} remote · {channel}
-                </td>
-              </tr>
-              <tr>
-                <td className="text-slate-500">Audio</td>
-                <td colSpan={5}>
-                  <div className="flex items-center gap-4">
-                    <Waveform
-                      buyer={call.telemetry.buyerLevel}
-                      agent={call.telemetry.agentLevel}
-                      active={call.connected}
-                    />
-                    <span className="num text-xs text-slate-500">
-                      Buyer {Math.round(call.telemetry.buyerLevel * 100)} · Maya{" "}
-                      {Math.round(call.telemetry.agentLevel * 100)}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <section className="panel flex max-h-[560px] flex-col">
-            <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Live transcript
+      <section className="nova-transcript" ref={transcriptRef as never}>
+        <span className="nova-label">Transcript</span>
+        {call.transcripts.length === 0 ? (
+          <p className="nova-empty">
+            Nothing yet. Just talk — pricing, interrupt, seats, demo. No button to hold.
+          </p>
+        ) : (
+          call.transcripts.map((line, i) => (
+            <div
+              key={`${line.at}-${i}`}
+              className={`nova-turn ${line.role === "agent" ? "nova-turn--maya" : ""} ${
+                line.final ? "" : "nova-turn--partial"
+              }`}
+            >
+              <span className="nova-turn__who">
+                {line.role === "agent" ? "MAYA" : "YOU"}
+              </span>
+              <p className="nova-turn__text">{line.text}</p>
             </div>
-            <div ref={scroller} className="min-h-0 flex-1 overflow-auto">
-              <table className="sheet">
-                <thead className="sticky top-0">
-                  <tr>
-                    <th className="w-24">Time</th>
-                    <th className="w-20">Speaker</th>
-                    <th>Text</th>
-                    <th className="w-16">State</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {call.transcripts.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-slate-500">
-                        Allow the microphone, then speak. Pricing, interruption, seats, demo — Maya is not scripted.
-                      </td>
-                    </tr>
-                  ) : (
-                    call.transcripts.map((line, i) => (
-                      <tr key={`${line.at}-${i}`}>
-                        <td className="num text-slate-500">
-                          {new Date(line.at).toLocaleTimeString("en-IN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </td>
-                        <td className="font-medium">
-                          {line.role === "agent" ? "Maya" : "You"}
-                        </td>
-                        <td>{line.text}</td>
-                        <td className="text-slate-500">{line.final ? "Final" : "Live"}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          ))
+        )}
+      </section>
 
-          <div className="space-y-4">
-            <section className="panel">
-              <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                CRM lead
-              </div>
-              <table className="sheet">
-                <tbody>
-                  <Row label="Account" value={lead?.company} />
-                  <Row label="Buyer" value={lead?.name} />
-                  <Row label="Stage" value={stageLabel(lead?.status)} />
-                  <Row label="Seats" value={lead?.seats} />
-                  <Row label="Plan" value={economics.plan?.name} />
-                  <Row
-                    label="List / user"
-                    value={
-                      economics.plan
-                        ? economics.plan.pricePerUserUsd === "custom"
-                          ? "Custom"
-                          : formatUsd(economics.plan.pricePerUserUsd)
-                        : undefined
-                    }
-                  />
-                  <Row label="Competitor" value={lead?.competitor} />
-                  <Row
-                    label="Objections"
-                    value={lead?.objections?.length ? lead.objections.join(", ") : undefined}
-                  />
-                  <Row
-                    label="Meeting"
-                    value={call.session?.meetings?.[0]?.label}
-                  />
-                </tbody>
-              </table>
-              {call.session?.escalation ? (
-                <div className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-sm">
-                  <div className="font-medium text-amber-800">Human requested</div>
-                  <p>{call.session.escalation.reason}</p>
-                  <p className="text-slate-600">{call.session.escalation.summary}</p>
-                </div>
-              ) : null}
-            </section>
-
-            <section className="panel max-h-48 overflow-auto">
-              <table className="sheet">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Tool</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tools.length === 0 ? (
-                    <tr>
-                      <td colSpan={2} className="text-slate-500">
-                        Waiting for MCP tool calls
-                      </td>
-                    </tr>
-                  ) : (
-                    tools.map((t, i) => (
-                      <tr key={`${t.at}-${i}`}>
-                        <td className="num text-slate-500">{t.at.slice(11, 19)}</td>
-                        <td className="font-medium">{t.tool}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </section>
-
-            <section className="panel">
-              <table className="sheet">
-                <thead>
-                  <tr>
-                    <th className="w-12">#</th>
-                    <th>Judge playbook (you speak this)</th>
-                    <th className="w-24">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {playbook.map((step, i) => (
-                    <tr key={step.id}>
-                      <td className="num text-slate-500">{i + 1}</td>
-                      <td>
-                        {step.label}
-                        <span className="block text-xs text-slate-500">{step.hint}</span>
-                      </td>
-                      <td className={step.done ? "font-medium text-emerald-700" : "text-slate-500"}>
-                        {step.done ? "Done" : "Pending"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          </div>
+      <div className="nova-stage-wrap">
+        <NovaOrb
+          buyerLevel={call.telemetry.buyerLevel}
+          agentLevel={call.telemetry.agentLevel}
+          connected={call.connected}
+          agentSpeaking={call.agentSpeaking}
+        />
+        <div className={`nova-agora ${call.connected ? "nova-agora--on" : ""}`}>
+          <span className="nova-agora__live" />
+          <span className="nova-agora__mark">AGORA</span>
+          <span>Conversational AI</span>
+          <span className="nova-agora__v">{channel || "—"}</span>
+          <span>
+            rtt{" "}
+            <span className="nova-agora__v">
+              {call.rttMs != null ? `${call.rttMs}ms` : "—"}
+            </span>
+          </span>
+          <span>
+            uid <span className="nova-agora__v">{CUSTOMER_UID}→123456</span>
+          </span>
         </div>
       </div>
-    </AppShell>
-  );
-}
 
-function Row({ label, value }: { label: string; value?: string | number }) {
-  return (
-    <tr>
-      <td className="w-36 text-slate-500">{label}</td>
-      <td className="font-medium">
-        <FlashValue value={value ?? null} />
-      </td>
-    </tr>
+      <aside className="nova-log" ref={logRef as never}>
+        <div className="nova-log__head">
+          <span className="nova-label">Actions</span>
+          <span className="nova-label">{cards.length || ""}</span>
+        </div>
+        {lead?.company || lead?.seats || lead?.status ? (
+          <article className="nova-card">
+            <div className="nova-card__head">
+              <span className="nova-card__verb">Lead</span>
+              <span className="nova-card__kind">{lead.status}</span>
+            </div>
+            <div className="nova-card__title">
+              {[lead.company, lead.name].filter(Boolean).join(" · ") || "Buyer"}
+            </div>
+            <div className="nova-card__detail">
+              {[
+                lead.seats ? `${lead.seats} seats` : null,
+                lead.competitor ? `vs ${lead.competitor}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          </article>
+        ) : null}
+        {cards.length === 0 ? (
+          <p className="nova-empty">
+            Everything Maya actually does lands here — pricing, CRM writes, demo bookings,
+            human handoff.
+          </p>
+        ) : (
+          cards.map((c) => (
+            <article key={c.key} className="nova-card nova-card--flash">
+              <div className="nova-card__head">
+                <span className="nova-card__verb">{c.verb}</span>
+                <span className="nova-card__kind">{c.kind}</span>
+              </div>
+              <div className="nova-card__title">{c.title}</div>
+              {c.detail ? (
+                <div className="nova-card__detail">{c.detail}</div>
+              ) : null}
+            </article>
+          ))
+        )}
+      </aside>
+
+      {gateOpen && !call.connected ? (
+        <div className="nova-gate">
+          <div className="nova-gate__mark">MOLVAANI</div>
+          <p className="nova-gate__sub">{gateHint}</p>
+          <div className="nova-gate__row">
+            <span className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : ""}`}>
+              tools
+            </span>
+            <span className="nova-dot nova-dot--on">agora</span>
+          </div>
+          {showWake ? (
+            <button
+              type="button"
+              className="nova-btn nova-btn--primary"
+              onClick={wake}
+              disabled={call.connecting}
+            >
+              {call.connecting ? "Connecting…" : "Wake MolVaani"}
+            </button>
+          ) : null}
+          {booting || call.connecting ? (
+            <p className="nova-label">initialising</p>
+          ) : null}
+          {call.error ? <p className="nova-gate__err">{call.error}</p> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

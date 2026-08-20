@@ -1,159 +1,129 @@
-# MolVaani Cloud (SaaS)
+# MolVaani Cloud
 
-EchoSphere (Knotic × Agora) · Track **Adaptive AI Sales and Negotiation Agent** · **PS21**
+EchoSphere (Knotic × Agora) · **PS21** · Adaptive AI Sales and Negotiation Agent
 
-Multi-tenant SaaS for Agora voice interactive agents. Live barge-in sales desk (Maya) plus org auth, agent config, persisted CRM, embed widget, and billing stub.
+A voice sales agent that **speaks, listens, and acts** on **Agora Conversational AI**.  
+Live desk UI is modeled on [nova-agora](https://github.com/vaivikop/nova-agora) (instrument layout: transcript · orb · action cards), while voice stays on Agora’s managed STT → LLM → TTS path — not a custom chatbot with speech bolted on.
 
-**GitHub:** https://github.com/krabhi75/aetherclose
+**GitHub:** https://github.com/krabhi75/aetherclose  
+**UI reference:** https://github.com/vaivikop/nova-agora
 
-## Product surfaces
+---
+
+## Live desk (Nova-style layout)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ MOLVAANI · agent · mcp                              End     │
+├──────────────┬──────────────────────────┬───────────────────┤
+│ Transcript   │         ORB              │ Actions           │
+│ YOU / MAYA   │   listening / speaking   │ CRM · tools       │
+│              │ AGORA · channel · rtt    │ pricing · book    │
+└──────────────┴──────────────────────────┴───────────────────┘
+```
+
+- Auto-wake when mic permission is already granted (`?manual` forces the Wake button)
+- Real mic / agent levels drive the orb (not a fake spinner)
+- Agora readout shows **channel · RTT · uid** from the live RTC connection
+- MCP tool results land as action cards on the right
+
+## Routes
 
 | Route | Purpose |
 |---|---|
-| `/` | Marketing landing |
-| `/signup` · `/login` | MolVaani Cloud auth |
-| `/app` | Tenant dashboard |
-| `/app/live` | Authenticated Agora live desk |
-| `/app/agents` | Agent CRUD / prompt editor |
-| `/app/leads` | Persisted CRM leads |
-| `/app/billing` | Plan limits + Stripe stub |
-| `/demo` | Public hackathon demo desk (no login) |
-| `/embed/:org/:agent` | Embeddable call widget |
-| `/human?channel=` | Human specialist warm transfer |
+| `/` | Landing |
+| `/demo` | Public live desk (hackathon / judges) |
+| `/app/live` | Authenticated live desk |
+| `/app` | SaaS dashboard |
+| `/app/agents` | Agent prompt / voice editor |
+| `/app/leads` | Persisted CRM |
+| `/app/billing` | Plan + Stripe stub |
+| `/embed/:org/:agent` | Embeddable widget |
+| `/human?channel=` | Human specialist same-channel handoff |
+| `/login` · `/signup` | Auth |
 
 Demo login after seed: `demo@molvaani.app` / `demo1234`
-
-## Submission checklist
-
-EchoSphere asks for: working prototype, source repo, README, architecture diagram, 3–5 min demo video, live demo, tech list, known limitations.
-
-| Artifact | Location |
-|---|---|
-| Working prototype | `npm run dev` → http://localhost:3000/demo |
-| SaaS console | http://localhost:3000/app |
-| Architecture diagram | [Whimsical system](https://whimsical.com/aetherclose-architecture-echosphere-ps21-Sp4yxNN5P85iFaowhtygnj) · [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Call sequence | [Whimsical sequence](https://whimsical.com/aetherclose-ps21-live-call-flow-GJmAnfXzaDjsPyvPWAfoxQ) |
-| Requirement map | [Whimsical mind map](https://whimsical.com/aetherclose-echosphere-requirement-map-LbwERus1kZJQMHqmwMf2Mu) |
-| SaaS build prompt | [docs/SAAS_BUILD_PROMPT.md](docs/SAAS_BUILD_PROMPT.md) |
-| Commudle paste copy | [docs/SUBMISSION.md](docs/SUBMISSION.md) |
-| Demo video shot list | [docs/DEMO.md](docs/DEMO.md) |
-
-## Terms mapping
-
-| EchoSphere / PS21 requirement | How MolVaani satisfies it |
-|---|---|
-| Agora Conversational AI is mandatory and central | Customer joins an Agora RTC channel; the **business server** starts an Agora Conversational AI agent into the same channel via `agora-agents` `session.start()` / `agents.stop()` |
-| Not a voice-enabled chatbot | Audio never leaves Agora’s SDRTN. Browser has no LLM. Server never touches PCM |
-| Natural turn-taking and interruption | `turnDetection` + `interruption.enable` (`start_of_speech`). Customer can barge in |
-| Contextual memory | `maxHistory: 50` plus CRM upserts for seats, competitor, objections |
-| Not a fixed script | System prompt is a sales policy. Demo path is what **you** say, not what Maya recites |
-| Qualification through spoken conversation | Maya asks for company, seats, timeline, decision process only as the talk unfolds |
-| Pricing / trust / product objections | Distinct tactics in the prompt; competitor and price retrieved by tools |
-| Retrieve product, pricing, availability | MCP tools `get_pricing`, `compare_competitor`, `get_availability` |
-| CRM / calendar / lead system | SQLite/Postgres CRM + calendar; `upsert_crm_lead`, `book_demo` |
-| Human escalation with context | `escalate_to_human` writes a summary; `/human` joins the **same RTC channel** |
-| Clear outcome | Demo booked, qualified follow-up, or human handoff — shown live on the desk |
-| Live demo (not a prerecord) | Browser mic → Agora RTC. Backup video allowed; judging demo must be live |
-
-FAQ disqualification checks: Agora is central. Not STT/TTS around a chatbot. Demo is live. Product is collaboration software (no medical/legal/emergency advice).
 
 ## Architecture
 
 ```text
-Browser (customer uid 1002)
-  agora-rtc-sdk-ng  →  Agora RTC channel  ←  Conversational AI agent (uid 123456)
-  agora-rtm-sdk     →  live transcripts
+Browser mic
+  agora-rtc-sdk-ng  →  Agora RTC channel  ←  Conversational AI agent
+  agora-rtm / toolkit → live transcripts
         │
         ▼
-Next.js SaaS (certificate stays here)
-  Auth · Orgs · AgentConfig · Leads · Usage
-  POST /api/token              RTC + RTM tokens
-  POST /api/invite-agent       Agent.withStt().withLlm().withTts().start()
-  POST /api/stop-conversation  agents.stop()
-  POST /api/mcp                pricing, competitor, CRM, calendar, escalate
-  GET  /api/session/:channel   live CRM snapshot for the desk
-        │
-        ▼
-SQLite (local) / Postgres (prod) + in-memory hot cache
-Human specialist (uid 2002) joins the same channel with conversation context
+Next.js (MolVaani Cloud)
+  POST /api/token · /api/invite-agent · /api/stop-conversation
+  POST /api/mcp  (pricing, competitor, CRM, calendar, escalate)
+  Auth · Orgs · AgentConfig · Leads · Usage (Prisma / SQLite)
 ```
 
-Managed models (no extra vendor keys): Deepgram nova-3, OpenAI gpt-4o-mini, MiniMax speech-2.6-turbo.
+Managed models: Deepgram nova-3 · GPT-4o-mini · MiniMax speech-2.6-turbo.
+
+What we keep from Nova’s UX ideas; what we do **not** copy:
+
+| Nova (reference) | MolVaani |
+|---|---|
+| Paper instrument UI, orb, action cards | Replicated |
+| Custom OpenAI-compatible LLM endpoint + Groq | **Not used** — Agora Conversational AI is mandatory for PS21 |
+| Google Calendar / Gmail tools | Sales MCP tools + CRM instead |
 
 ## Setup
 
-1. Agora project with **RTC** and **Conversational AI** enabled.
-
-2. Copy env:
-
 ```bash
-cp .env.example .env.local
-```
-
-Fill Agora keys, then:
-
-```bash
-DATABASE_URL="file:./dev.db"
-AUTH_SECRET=any-long-random-string
-PUBLIC_BASE_URL=https://your-cloudflare-or-ngrok-host
-AETHER_MCP_KEY=a-long-random-string
-```
-
-`PUBLIC_BASE_URL` must be HTTPS reachable from Agora’s cloud. Localhost is not.
-
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
-
-3. Database + seed:
-
-```bash
+cd "C:\Users\krabh\Downloads\Ecosphere Hackathons\aetherclose"
 npm install
 npm run db:push
 npm run db:seed
 npm run dev
 ```
 
-4. Open:
+Open http://localhost:3000/demo — allow the microphone.
 
-- Hackathon live desk: http://localhost:3000/demo
-- SaaS: http://localhost:3000/signup or login with demo credentials
-- Allow the microphone, start the call.
+`.env.local` essentials:
 
-Without a public HTTPS URL the voice call still works; CRM writes from the agent will not.
+```bash
+NEXT_PUBLIC_AGORA_APP_ID=...
+NEXT_AGORA_APP_CERTIFICATE=...
+AGORA_AREA=US
+PUBLIC_BASE_URL=https://your-cloudflare-tunnel
+AETHER_MCP_KEY=...
+DATABASE_URL="file:./dev.db"
+AUTH_SECRET=long-random-string
+```
 
-## Demo path (what the customer says)
+Tunnel (Agora must reach MCP):
 
-Maya must not follow a script. You should:
+```bash
+cloudflared tunnel --url http://localhost:3000
+```
 
-1. Ask about pricing first.
-2. Interrupt and compare with Slack or Teams.
-3. Change the expected number of users.
-4. Ask for an enterprise demonstration.
+Paste the HTTPS URL into `PUBLIC_BASE_URL` and restart `npm run dev`.
 
-Expected outcome: Maya re-prices, compares, updates CRM, and books a demo or escalates.
+## Demo path (you speak)
 
-## Technologies used
+1. Ask pricing first  
+2. Interrupt with Slack / Teams  
+3. Change seat count (e.g. 50)  
+4. Ask for an enterprise demo Thursday IST  
 
-- Agora Conversational AI Engine (`agora-agents`)
-- Agora RTC (`agora-rtc-sdk-ng`)
-- Agora RTM (`agora-rtm` / toolkit)
-- Agora token builder (`agora-token`)
-- Deepgram nova-3, OpenAI gpt-4o-mini, MiniMax speech-2.6-turbo (Agora-managed)
-- Next.js 16, React 19, TypeScript, Tailwind CSS
-- Prisma + SQLite (Postgres-ready via `DATABASE_URL`)
-- JWT cookie auth (`jose` + `bcryptjs`)
-- MCP (streamable HTTP) for tools
-- Stripe checkout stub (optional keys)
-- Cloudflare Tunnel for a public HTTPS tool endpoint
+Watch the orb, transcript, and action cards update live.
+
+## Tech
+
+- Agora Conversational AI (`agora-agents`) + RTC + RTM
+- Next.js 16 · React 19 · TypeScript · Tailwind
+- Prisma + SQLite (Postgres-ready)
+- JWT auth · MCP tools · Stripe billing stub
 
 ## Known limitations
 
-- Conversational AI PCU API cap is 20 concurrent sessions per App ID.
-- MCP tools require a public base URL; quick tunnels expire if `cloudflared` stops.
-- Hot session cache is in-memory with async DB write-through; use a single Node process or Redis for multi-instance production.
-- Region defaults to `Area.US` for managed models.
-- Human join does not auto-stop Maya; use **Stop Maya (handover)** on `/human`.
-- First 300 Conversational AI minutes are free, then $0.10/min.
-- Stripe billing is stubbed until `STRIPE_SECRET_KEY` + price IDs are set.
-- Vercel Deployment Protection must be off (or MCP routes public) for Agora tool calls.
+- MCP needs a public HTTPS `PUBLIC_BASE_URL` (not localhost)
+- Hot session cache is in-process with DB write-through
+- Stripe Checkout is stubbed until keys are set
+- Conversational AI PCU cap and managed-model region (`US`) apply
+
+## Credits
+
+Live-desk visual language adapted from [vaivikop/nova-agora](https://github.com/vaivikop/nova-agora) (Nova).  
+Voice and agent lifecycle remain Agora Conversational AI for EchoSphere compliance.

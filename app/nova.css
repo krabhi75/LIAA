@@ -376,11 +376,51 @@
   line-height: 1.35;
 }
 
-.nova-card__detail {
+.nova-card--demo {
+  border-left-color: var(--ink-4);
+}
+
+.nova-card--demo .nova-card__verb {
+  color: var(--ink-3);
+}
+
+.nova-card--ask {
+  border-left-color: var(--alert);
+}
+
+.nova-card--ask .nova-card__verb {
+  color: var(--alert);
+}
+
+.nova-card__demo {
   font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--ink-2);
-  margin-top: 3px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  padding: 2px 5px;
+  border: 1px solid var(--ink-4);
+  border-radius: 4px;
+  color: var(--ink-3);
+}
+
+.nova-card__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.nova-card__link {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--nova);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-card__link:hover {
+  text-decoration: underline;
 }
 
 .nova-empty {

@@ -1,67 +1,59 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAetherCall } from "@/hooks/useAetherCall";
 import { CUSTOMER_UID } from "@/lib/ids";
 import { NovaOrb } from "./NovaOrb";
 
-const TOOL_CARD: Record<
-  string,
-  { verb: string; kind: string; title: (out: unknown) => string; detail?: (out: unknown) => string }
-> = {
-  get_pricing: {
-    verb: "Priced",
-    kind: "catalog",
-    title: (o) => {
-      const r = o as { recommended_plan?: string; seats?: number };
-      return `${r.recommended_plan ?? "Plan"} · ${r.seats ?? "?"} seats`;
-    },
-    detail: (o) => {
-      const r = o as { estimated_monthly_usd?: number };
-      return r.estimated_monthly_usd != null
-        ? `≈ $${r.estimated_monthly_usd}/mo list`
-        : "";
-    },
-  },
-  compare_competitor: {
-    verb: "Compared",
-    kind: "objection",
-    title: (o) => `vs ${(o as { competitor?: string }).competitor ?? "competitor"}`,
-  },
-  get_availability: {
-    verb: "Checked",
-    kind: "calendar",
-    title: () => "IST demo slots",
-  },
-  upsert_crm_lead: {
-    verb: "CRM",
-    kind: "lead",
-    title: (o) => {
-      const r = o as { company?: string; name?: string; seats?: number };
-      return [r.company, r.name, r.seats ? `${r.seats} seats` : null]
-        .filter(Boolean)
-        .join(" · ") || "Lead updated";
-    },
-  },
-  book_demo: {
-    verb: "Booked",
-    kind: "calendar",
-    title: (o) => (o as { label?: string }).label ?? "Demo booked",
-    detail: (o) => (o as { attendee?: string }).attendee ?? "",
-  },
-  escalate_to_human: {
-    verb: "Escalated",
-    kind: "handoff",
-    title: (o) => (o as { reason?: string }).reason ?? "Human requested",
-    detail: (o) => (o as { summary?: string }).summary ?? "",
-  },
-  get_lead: {
-    verb: "Read",
-    kind: "lead",
-    title: () => "CRM snapshot",
-  },
+type ActionCard = {
+  key: string;
+  verb: string;
+  kind: string;
+  title: string;
+  detail: string;
+  demo?: boolean;
+  ask?: boolean;
+  link?: string;
 };
+
+function cardFromTool(tool: string, output: unknown, at: string, i: number): ActionCard {
+  const o = (output && typeof output === "object" ? output : {}) as Record<
+    string,
+    unknown
+  >;
+  const embedded = o.card as
+    | {
+        verb?: string;
+        kind?: string;
+        title?: string;
+        detail?: string;
+        demo?: boolean;
+        ask?: boolean;
+        link?: string;
+      }
+    | undefined;
+
+  if (embedded?.title) {
+    return {
+      key: `${at}-${tool}-${i}`,
+      verb: embedded.verb ?? "Did",
+      kind: embedded.kind ?? tool,
+      title: embedded.title,
+      detail: embedded.detail ?? "",
+      demo: embedded.demo,
+      ask: embedded.ask,
+      link: embedded.link,
+    };
+  }
+
+  return {
+    key: `${at}-${tool}-${i}`,
+    verb: "Tool",
+    kind: tool,
+    title: tool,
+    detail: "",
+  };
+}
 
 export function MolVaaniDesk({
   channel,
@@ -73,7 +65,7 @@ export function MolVaaniDesk({
   const call = useAetherCall(channel, CUSTOMER_UID, { agentConfigId });
   const [gateOpen, setGateOpen] = useState(true);
   const [gateHint, setGateHint] = useState(
-    "MolVaani needs your microphone. Allow it once and the desk wakes itself from then on.",
+    "Nova needs your microphone. Allow it once and it wakes by itself from then on.",
   );
   const [booting, setBooting] = useState(true);
   const [showWake, setShowWake] = useState(false);
@@ -82,25 +74,12 @@ export function MolVaaniDesk({
   const logRef = useRef<HTMLElement>(null);
 
   const tools = call.session?.tools ?? [];
-  const lead = call.session?.lead;
   const agentLive = call.remoteUsers.length > 0 || call.agentSpeaking;
 
   const cards = useMemo(() => {
-    return [...tools].reverse().map((t, i) => {
-      const meta = TOOL_CARD[t.tool] ?? {
-        verb: "Tool",
-        kind: "mcp",
-        title: () => t.tool,
-      };
-      return {
-        key: `${t.at}-${t.tool}-${i}`,
-        verb: meta.verb,
-        kind: meta.kind,
-        title: meta.title(t.output),
-        detail: meta.detail?.(t.output) ?? "",
-        at: t.at,
-      };
-    });
+    return [...tools]
+      .reverse()
+      .map((t, i) => cardFromTool(t.tool, t.output, t.at, i));
   }, [tools]);
 
   useEffect(() => {
@@ -152,20 +131,14 @@ export function MolVaaniDesk({
           setGateHint(
             "Microphone is blocked for this site. Allow it in the address bar, then reload.",
           );
-        } else {
-          setGateHint(
-            "MolVaani needs your microphone. Allow it once and the desk wakes itself from then on.",
-          );
         }
       } catch {
-        setGateHint(
-          "MolVaani needs your microphone. Allow it once and the desk wakes itself from then on.",
-        );
+        /* Safari / Firefox */
       }
       setBooting(false);
       setShowWake(true);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- wake once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel]);
 
   async function wake() {
@@ -173,7 +146,6 @@ export function MolVaaniDesk({
     setBooting(true);
     await call.start();
     setBooting(false);
-    if (!call.error) setShowWake(false);
   }
 
   async function end() {
@@ -181,30 +153,25 @@ export function MolVaaniDesk({
     setGateOpen(true);
     setShowWake(true);
     setBooting(false);
-    setGateHint("Session ended. Wake MolVaani again when you are ready.");
+    setGateHint("Session ended. Wake Nova again when you are ready.");
   }
 
   return (
     <div className="nova-app">
       <header className="nova-bar">
-        <span className="nova-mark">MOLVAANI</span>
+        <span className="nova-mark">NOVA</span>
         <span className={`nova-dot ${agentLive ? "nova-dot--on" : ""}`}>
           {agentLive ? "agent live" : "agent"}
         </span>
-        <span className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : "nova-dot--warn"}`}>
-          {call.mcpAttached ? "mcp live" : "mcp tunnel"}
+        <span
+          className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : "nova-dot--warn"}`}
+        >
+          {call.mcpAttached ? "tools live" : "tools offline"}
         </span>
         <span className="nova-bar__spacer" />
         {call.error ? (
           <span className="nova-dot nova-dot--warn">{call.error.slice(0, 70)}</span>
         ) : null}
-        <Link
-          href={`/human?channel=${encodeURIComponent(channel)}`}
-          className="nova-btn"
-          style={{ textDecoration: "none" }}
-        >
-          Human
-        </Link>
         {call.connected ? (
           <button type="button" className="nova-btn" onClick={end}>
             End
@@ -216,7 +183,8 @@ export function MolVaaniDesk({
         <span className="nova-label">Transcript</span>
         {call.transcripts.length === 0 ? (
           <p className="nova-empty">
-            Nothing yet. Just talk — pricing, interrupt, seats, demo. No button to hold.
+            Nothing yet. Just talk — no button to hold. Ask about your day, book a
+            meeting, or read mail.
           </p>
         ) : (
           call.transcripts.map((line, i) => (
@@ -227,7 +195,7 @@ export function MolVaaniDesk({
               }`}
             >
               <span className="nova-turn__who">
-                {line.role === "agent" ? "MAYA" : "YOU"}
+                {line.role === "agent" ? "NOVA" : "YOU"}
               </span>
               <p className="nova-turn__text">{line.text}</p>
             </div>
@@ -264,40 +232,39 @@ export function MolVaaniDesk({
           <span className="nova-label">Actions</span>
           <span className="nova-label">{cards.length || ""}</span>
         </div>
-        {lead?.company || lead?.seats || lead?.status ? (
-          <article className="nova-card">
-            <div className="nova-card__head">
-              <span className="nova-card__verb">Lead</span>
-              <span className="nova-card__kind">{lead.status}</span>
-            </div>
-            <div className="nova-card__title">
-              {[lead.company, lead.name].filter(Boolean).join(" · ") || "Buyer"}
-            </div>
-            <div className="nova-card__detail">
-              {[
-                lead.seats ? `${lead.seats} seats` : null,
-                lead.competitor ? `vs ${lead.competitor}` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </div>
-          </article>
-        ) : null}
         {cards.length === 0 ? (
           <p className="nova-empty">
-            Everything Maya actually does lands here — pricing, CRM writes, demo bookings,
-            human handoff.
+            Everything Nova actually does lands here — calendar, mail, tabs, memory.
+            Seeded results show a DEMO DATA badge.
           </p>
         ) : (
           cards.map((c) => (
-            <article key={c.key} className="nova-card nova-card--flash">
+            <article
+              key={c.key}
+              className={`nova-card nova-card--flash ${c.demo ? "nova-card--demo" : ""} ${
+                c.ask ? "nova-card--ask" : ""
+              }`}
+            >
               <div className="nova-card__head">
                 <span className="nova-card__verb">{c.verb}</span>
+                {c.demo ? <span className="nova-card__demo">DEMO DATA</span> : null}
                 <span className="nova-card__kind">{c.kind}</span>
               </div>
               <div className="nova-card__title">{c.title}</div>
               {c.detail ? (
                 <div className="nova-card__detail">{c.detail}</div>
+              ) : null}
+              {c.link ? (
+                <div className="nova-card__foot">
+                  <a
+                    className="nova-card__link"
+                    href={c.link}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {c.link.replace(/^https?:\/\//, "")}
+                  </a>
+                </div>
               ) : null}
             </article>
           ))
@@ -306,7 +273,7 @@ export function MolVaaniDesk({
 
       {gateOpen && !call.connected ? (
         <div className="nova-gate">
-          <div className="nova-gate__mark">MOLVAANI</div>
+          <div className="nova-gate__mark">NOVA</div>
           <p className="nova-gate__sub">{gateHint}</p>
           <div className="nova-gate__row">
             <span className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : ""}`}>
@@ -321,7 +288,7 @@ export function MolVaaniDesk({
               onClick={wake}
               disabled={call.connecting}
             >
-              {call.connecting ? "Connecting…" : "Wake MolVaani"}
+              {call.connecting ? "Connecting…" : "Wake Nova"}
             </button>
           ) : null}
           {booting || call.connecting ? (

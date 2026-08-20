@@ -1,65 +1,40 @@
-# MolVaani Cloud
+# Nova
 
-EchoSphere (Knotic × Agora) · **PS21** · Adaptive AI Sales and Negotiation Agent
+A voice assistant that **speaks, listens, and acts** — on **Agora Conversational AI**.
 
-A voice sales agent that **speaks, listens, and acts** on **Agora Conversational AI**.  
-Live desk UI is modeled on [nova-agora](https://github.com/vaivikop/nova-agora) (instrument layout: transcript · orb · action cards), while voice stays on Agora’s managed STT → LLM → TTS path — not a custom chatbot with speech bolted on.
+Inspired by [vaivikop/nova-agora](https://github.com/vaivikop/nova-agora): same instrument UI (transcript · orb · actions) and assistant tools (calendar, mail, tabs, memory). **Not a sales representative.**
 
 **GitHub:** https://github.com/krabhi75/aetherclose  
-**UI reference:** https://github.com/vaivikop/nova-agora
+**Reference:** https://github.com/vaivikop/nova-agora
 
 ---
 
-## Live desk (Nova-style layout)
+## What Nova does
+
+| You say | What happens |
+|---|---|
+| "What does my day look like?" | `get_calendar` → action card |
+| "Book a sync with Rahul tomorrow at four" | `create_event` (DEMO DATA until Google is wired) |
+| "Move it an hour later" | `update_event` using the remembered event id |
+| "What's in my inbox?" | `read_email` |
+| "Open YouTube" | `open_tab` (trusted hosts auto-open; others ask) |
+| "Remember my name is Abhishek" | `remember` → durable `.nova-memory.json` |
+
+Seeded calendar/mail results carry a visible **DEMO DATA** badge — Nova will not pretend a Meet link is real Google.
+
+## Live desk
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ MOLVAANI · agent · mcp                              End     │
+│ NOVA · agent · tools                                 End    │
 ├──────────────┬──────────────────────────┬───────────────────┤
 │ Transcript   │         ORB              │ Actions           │
-│ YOU / MAYA   │   listening / speaking   │ CRM · tools       │
-│              │ AGORA · channel · rtt    │ pricing · book    │
+│ YOU / NOVA   │   listening / speaking   │ calendar · mail   │
+│              │ AGORA · channel · rtt    │ DEMO DATA badges  │
 └──────────────┴──────────────────────────┴───────────────────┘
 ```
 
-- Auto-wake when mic permission is already granted (`?manual` forces the Wake button)
-- Real mic / agent levels drive the orb (not a fake spinner)
-- Agora readout shows **channel · RTT · uid** from the live RTC connection
-- MCP tool results land as action cards on the right
-
-## Routes
-
-| Route | Purpose |
-|---|---|
-| `/` | Landing (no account) |
-| `/demo` | Live desk — primary entry |
-| `/human?channel=` | Human specialist same-channel handoff |
-| `/embed/:org/:agent` | Embeddable widget |
-
-No sign-in. `/login`, `/signup`, and `/app/*` redirect to `/demo`.
-
-## Architecture
-
-```text
-Browser mic
-  agora-rtc-sdk-ng  →  Agora RTC channel  ←  Conversational AI agent
-  agora-rtm / toolkit → live transcripts
-        │
-        ▼
-Next.js
-  POST /api/token · /api/invite-agent · /api/stop-conversation
-  POST /api/mcp  (pricing, competitor, CRM, calendar, escalate)
-```
-
-Managed models: Deepgram nova-3 · GPT-4o-mini · MiniMax speech-2.6-turbo.
-
-What we keep from Nova’s UX ideas; what we do **not** copy:
-
-| Nova (reference) | MolVaani |
-|---|---|
-| Paper instrument UI, orb, action cards | Replicated |
-| Custom OpenAI-compatible LLM endpoint + Groq | **Not used** — Agora Conversational AI is mandatory for PS21 |
-| Google Calendar / Gmail tools | Sales MCP tools + CRM instead |
+Open **http://localhost:3000/demo** — no sign-in. Auto-wakes when mic is already allowed (`?manual` forces the button).
 
 ## Setup
 
@@ -71,9 +46,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open http://localhost:3000/demo — allow the microphone.
-
-`.env.local` essentials:
+`.env.local`:
 
 ```bash
 NEXT_PUBLIC_AGORA_APP_ID=...
@@ -82,41 +55,42 @@ AGORA_AREA=US
 PUBLIC_BASE_URL=https://your-cloudflare-tunnel
 AETHER_MCP_KEY=...
 DATABASE_URL="file:./dev.db"
-AUTH_SECRET=long-random-string
+AUTH_SECRET=any-long-string
 ```
 
-Tunnel (Agora must reach MCP):
+Tunnel so Agora can reach MCP tools:
 
 ```bash
 cloudflared tunnel --url http://localhost:3000
 ```
 
-Paste the HTTPS URL into `PUBLIC_BASE_URL` and restart `npm run dev`.
+## Architecture
 
-## Demo path (you speak)
+```text
+mic → Agora RTC → Conversational AI (ASR → LLM → TTS)
+                      │  MCP tools
+                      ▼
+              /api/mcp  → calendar / mail / tab / memory
+                      │
+         public desk ◄── polls session + action cards
+```
 
-1. Ask pricing first  
-2. Interrupt with Slack / Teams  
-3. Change seat count (e.g. 50)  
-4. Ask for an enterprise demo Thursday IST  
+Voice stays on Agora managed models (Deepgram · GPT-4o-mini · MiniMax).  
+Unlike upstream nova-agora, this build does **not** use a custom Groq OpenAI-compat callback — that keeps Conversational AI as the voice engine.
 
-Watch the orb, transcript, and action cards update live.
+## vs nova-agora
 
-## Tech
+| Feature | Status |
+|---|---|
+| Instrument UI + orb + RTT | Yes |
+| Assistant persona (not sales) | Yes |
+| Calendar / mail / remember / open_tab tools | Yes (demo store + honest badges) |
+| Live Google OAuth | Not wired yet — use DEMO DATA path |
+| Desktop `open_app` | Not ported |
+| Groq custom LLM endpoint | Intentionally not used |
 
-- Agora Conversational AI (`agora-agents`) + RTC + RTM
-- Next.js 16 · React 19 · TypeScript · Tailwind
-- Prisma + SQLite (Postgres-ready)
-- JWT cookie auth · MCP tools · Stripe billing stub
+## Known limits
 
-## Known limitations
-
-- MCP needs a public HTTPS `PUBLIC_BASE_URL` (not localhost)
-- Hot session cache is in-process with DB write-through
-- Stripe Checkout is stubbed until keys are set
-- Conversational AI PCU cap and managed-model region (`US`) apply
-
-## Credits
-
-Live-desk visual language adapted from [vaivikop/nova-agora](https://github.com/vaivikop/nova-agora) (Nova).  
-Voice and agent lifecycle remain Agora Conversational AI for EchoSphere compliance.
+- MCP needs public HTTPS `PUBLIC_BASE_URL`
+- Calendar/mail writes are in-process demo data unless you add Google
+- Quick Cloudflare tunnels expire on restart

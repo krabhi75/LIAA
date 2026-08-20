@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MolVaani — Agora voice that closes the sauda",
+  title: "Nova — voice assistant on Agora",
   description:
-    "Live Agora Conversational AI sales desk: barge-in, tools, CRM, and human escalation.",
+    "Speaks, listens, acts. Calendar, mail, tabs, and memory via Agora Conversational AI.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

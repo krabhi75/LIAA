@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
-import { FAILURE_MESSAGE, GREETING, SALES_INSTRUCTIONS } from "./prompt";
+import { FAILURE_MESSAGE, GREETING, NOVA_INSTRUCTIONS } from "./prompt";
 import { mcpKey } from "./agora";
 
 const COOKIE = "molvaani_session";
@@ -131,10 +131,10 @@ export async function provisionOrgForUser(opts: {
           name: "Default",
           agents: {
             create: {
-              name: "Maya · Sales",
-              slug: "maya",
+              name: "Nova",
+              slug: "nova",
               greeting: GREETING,
-              systemPrompt: SALES_INSTRUCTIONS,
+              systemPrompt: NOVA_INSTRUCTIONS,
               failureMessage: FAILURE_MESSAGE,
               mcpKey: mcpKey(),
             },

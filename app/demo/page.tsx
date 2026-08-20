@@ -9,7 +9,7 @@ export default function DemoDeskPage() {
   if (!channel) {
     return (
       <div className="nova-gate">
-        <div className="nova-gate__mark">MOLVAANI</div>
+        <div className="nova-gate__mark">NOVA</div>
         <p className="nova-label">opening desk</p>
       </div>
     );

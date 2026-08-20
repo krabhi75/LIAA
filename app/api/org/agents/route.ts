@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { FAILURE_MESSAGE, GREETING, SALES_INSTRUCTIONS } from "@/lib/prompt";
+import { FAILURE_MESSAGE, GREETING, NOVA_INSTRUCTIONS } from "@/lib/prompt";
 import { mcpKey } from "@/lib/agora";
 import { randomBytes } from "crypto";
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       name: body.name,
       slug: `${slug}-${randomBytes(2).toString("hex")}`,
       greeting: GREETING,
-      systemPrompt: SALES_INSTRUCTIONS,
+      systemPrompt: NOVA_INSTRUCTIONS,
       failureMessage: FAILURE_MESSAGE,
       mcpKey: mcpKey(),
     },

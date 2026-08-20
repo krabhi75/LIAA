@@ -2,14 +2,16 @@ import { prisma } from "./db";
 import {
   FAILURE_MESSAGE,
   GREETING,
-  SALES_INSTRUCTIONS,
+  NOVA_INSTRUCTIONS,
 } from "./prompt";
 import { mcpKey } from "./agora";
 
 export async function getDefaultAgentForOrg(orgId: string) {
   const workspace = await prisma.workspace.findFirst({
     where: { orgId },
-    include: { agents: { where: { enabled: true }, orderBy: { createdAt: "asc" } } },
+    include: {
+      agents: { where: { enabled: true }, orderBy: { createdAt: "asc" } },
+    },
   });
   return workspace?.agents[0] ?? null;
 }
@@ -34,7 +36,7 @@ export async function getAgentBySlug(orgSlug: string, agentSlug: string) {
 }
 
 export async function ensureDemoTenant() {
-  const email = "demo@molvaani.app";
+  const email = "demo@nova.app";
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     const { hashPassword, provisionOrgForUser } = await import("./auth");
@@ -47,7 +49,7 @@ export async function ensureDemoTenant() {
     });
     await provisionOrgForUser({
       userId: user.id,
-      orgName: "MolVaani Demo",
+      orgName: "Nova Demo",
       email,
     });
   }
@@ -77,12 +79,23 @@ export async function ensureDemoTenant() {
     agent = await prisma.agentConfig.create({
       data: {
         workspaceId: ws.id,
-        name: "Maya · Sales",
-        slug: "maya",
+        name: "Nova",
+        slug: "nova",
         greeting: GREETING,
-        systemPrompt: SALES_INSTRUCTIONS,
+        systemPrompt: NOVA_INSTRUCTIONS,
         failureMessage: FAILURE_MESSAGE,
         mcpKey: mcpKey(),
+      },
+    });
+  } else {
+    agent = await prisma.agentConfig.update({
+      where: { id: agent.id },
+      data: {
+        name: "Nova",
+        slug: agent.slug === "maya" ? "nova" : agent.slug,
+        greeting: GREETING,
+        systemPrompt: NOVA_INSTRUCTIONS,
+        failureMessage: FAILURE_MESSAGE,
       },
     });
   }

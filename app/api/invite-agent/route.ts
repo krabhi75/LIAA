@@ -16,11 +16,12 @@ import {
 } from "@/lib/agora";
 import { getSession } from "@/lib/auth";
 import { AGENT_UID } from "@/lib/ids";
-import { FAILURE_MESSAGE, GREETING, SALES_INSTRUCTIONS } from "@/lib/prompt";
+import { FAILURE_MESSAGE, novaGreeting } from "@/lib/prompt";
 import { ensureDemoTenant, getDefaultAgentForOrg, recordUsage } from "@/lib/saas";
 import { bindSessionMeta, setAgentId } from "@/lib/store";
-import { TOOL_NAMES } from "@/lib/tools";
+import { buildNovaSystemPrompt, TOOL_NAMES } from "@/lib/tools";
 import { prisma } from "@/lib/db";
+import { loadMemories } from "@/lib/memory";
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +31,8 @@ export async function POST(req: NextRequest) {
     if (!channel) {
       return NextResponse.json({ error: "channel required" }, { status: 400 });
     }
+
+    await loadMemories();
 
     const sessionUser = await getSession();
     let orgId: string | undefined;
@@ -66,24 +69,21 @@ export async function POST(req: NextRequest) {
       base.includes("127.0.0.1");
     const mcpAttached = Boolean(mcpEndpoint && !localhost);
     const toolKey = config.mcpKey || mcpKey();
+    const systemPrompt = await buildNovaSystemPrompt(channel);
+    const greeting = await novaGreeting();
 
     const llm = new OpenAI({
       model: config.llmModel || "gpt-4o-mini",
       maxHistory: 50,
       temperature: 0.6,
-      systemMessages: [
-        {
-          role: "system",
-          content: config.systemPrompt || SALES_INSTRUCTIONS,
-        },
-      ],
-      greetingMessage: config.greeting || GREETING,
+      systemMessages: [{ role: "system", content: systemPrompt }],
+      greetingMessage: greeting,
       failureMessage: config.failureMessage || FAILURE_MESSAGE,
       ...(mcpAttached
         ? {
             mcpServers: [
               {
-                name: "molvaani",
+                name: "nova",
                 transport: "streamable_http",
                 endpoint: mcpEndpoint!,
                 headers: {
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       channel,
       agentUid: AGENT_UID,
       remoteUids: ["*"],
-      name: `molvaani-${channel}`.slice(0, 64),
+      name: `nova-${channel}`.slice(0, 64),
       idleTimeout: config.idleTimeout || 180,
       expiresIn: ExpiresIn.hours(1),
     });

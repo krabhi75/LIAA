@@ -4,8 +4,12 @@ export default function LandingPage() {
   return (
     <div className="saas-paper min-h-screen">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <div className="nova-mark">MOLVAANI</div>
-        <Link href="/demo" className="nova-btn nova-btn--primary" style={{ padding: "8px 16px", fontSize: 13 }}>
+        <div className="nova-mark">NOVA</div>
+        <Link
+          href="/demo"
+          className="nova-btn nova-btn--primary"
+          style={{ padding: "8px 16px", fontSize: 13 }}
+        >
           Open desk
         </Link>
       </header>
@@ -17,9 +21,12 @@ export default function LandingPage() {
         <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-tight text-[var(--ink)]">
           Speaks, listens, acts.
         </h1>
-        <p className="mt-4 max-w-xl text-lg text-[var(--ink-3)]" style={{ lineHeight: 1.6 }}>
-          Live Agora voice sales agent — barge-in, tools, CRM, human handoff.
-          Desk layout adapted from{" "}
+        <p
+          className="mt-4 max-w-xl text-lg text-[var(--ink-3)]"
+          style={{ lineHeight: 1.6 }}
+        >
+          Your voice assistant — calendar, mail, tabs, memory. Not a sales rep.
+          Layout and product shape from{" "}
           <a
             href="https://github.com/vaivikop/nova-agora"
             className="text-[var(--nova)]"
@@ -28,14 +35,11 @@ export default function LandingPage() {
           >
             nova-agora
           </a>
-          . No account required.
+          ; voice on Agora Conversational AI.
         </p>
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-8">
           <Link href="/demo" className="nova-btn nova-btn--primary">
-            Wake live desk
-          </Link>
-          <Link href="/human" className="nova-btn">
-            Human specialist
+            Wake Nova
           </Link>
         </div>
 
@@ -43,20 +47,22 @@ export default function LandingPage() {
           {[
             {
               title: "Instrument UI",
-              body: "Transcript · orb stage · action cards. Live Agora channel + RTT under the orb.",
-            },
-            {
-              title: "Agora-native voice",
-              body: "Buyer and Maya share one RTC channel. Turn-taking and interruption stay on Agora.",
+              body: "Transcript · orb · action cards. Live Agora channel and RTT under the orb.",
             },
             {
               title: "Tools that land",
-              body: "MCP pricing, competitor, CRM, calendar, escalate — cards update as tools fire.",
+              body: "get_calendar, create_event, read_email, draft/send, open_tab, remember — with DEMO DATA badges when seeded.",
+            },
+            {
+              title: "Not sales",
+              body: "No lead qualification pitch. Nova is a personal assistant that does things.",
             },
           ].map((item) => (
             <div key={item.title}>
               <h2 className="text-sm font-semibold text-[var(--ink)]">{item.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--ink-3)]">{item.body}</p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--ink-3)]">
+                {item.body}
+              </p>
             </div>
           ))}
         </section>

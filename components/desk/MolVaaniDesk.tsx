@@ -198,8 +198,12 @@ export function MolVaaniDesk({
         {call.error ? (
           <span className="nova-dot nova-dot--warn">{call.error.slice(0, 70)}</span>
         ) : null}
-        <Link href="/app" className="nova-btn" style={{ textDecoration: "none" }}>
-          Cloud
+        <Link
+          href={`/human?channel=${encodeURIComponent(channel)}`}
+          className="nova-btn"
+          style={{ textDecoration: "none" }}
+        >
+          Human
         </Link>
         {call.connected ? (
           <button type="button" className="nova-btn" onClick={end}>

@@ -1,23 +1,13 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
 
-export default async function LandingPage() {
-  const session = await getSession();
-  if (session) redirect("/app");
-
+export default function LandingPage() {
   return (
     <div className="saas-paper min-h-screen">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
         <div className="nova-mark">MOLVAANI</div>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href="/login" className="text-[var(--ink-3)] hover:text-[var(--ink)]">
-            Sign in
-          </Link>
-          <Link href="/signup" className="nova-btn nova-btn--primary" style={{ padding: "8px 16px", fontSize: 13 }}>
-            Start free
-          </Link>
-        </div>
+        <Link href="/demo" className="nova-btn nova-btn--primary" style={{ padding: "8px 16px", fontSize: 13 }}>
+          Open desk
+        </Link>
       </header>
 
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-20">
@@ -28,8 +18,8 @@ export default async function LandingPage() {
           Speaks, listens, acts.
         </h1>
         <p className="mt-4 max-w-xl text-lg text-[var(--ink-3)]" style={{ lineHeight: 1.6 }}>
-          MolVaani is a live Agora voice sales agent for Indian buyers — barge-in,
-          mol-bhav, CRM, and human takeover. Layout inspired by{" "}
+          Live Agora voice sales agent — barge-in, tools, CRM, human handoff.
+          Desk layout adapted from{" "}
           <a
             href="https://github.com/vaivikop/nova-agora"
             className="text-[var(--nova)]"
@@ -38,14 +28,14 @@ export default async function LandingPage() {
           >
             nova-agora
           </a>
-          ; voice stays on Agora Conversational AI.
+          . No account required.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/demo" className="nova-btn nova-btn--primary">
             Wake live desk
           </Link>
-          <Link href="/signup" className="nova-btn">
-            Create Cloud workspace
+          <Link href="/human" className="nova-btn">
+            Human specialist
           </Link>
         </div>
 

@@ -31,18 +31,12 @@ Live desk UI is modeled on [nova-agora](https://github.com/vaivikop/nova-agora) 
 
 | Route | Purpose |
 |---|---|
-| `/` | Landing |
-| `/demo` | Public live desk (hackathon / judges) |
-| `/app/live` | Authenticated live desk |
-| `/app` | SaaS dashboard |
-| `/app/agents` | Agent prompt / voice editor |
-| `/app/leads` | Persisted CRM |
-| `/app/billing` | Plan + Stripe stub |
-| `/embed/:org/:agent` | Embeddable widget |
+| `/` | Landing (no account) |
+| `/demo` | Live desk — primary entry |
 | `/human?channel=` | Human specialist same-channel handoff |
-| `/login` · `/signup` | Auth |
+| `/embed/:org/:agent` | Embeddable widget |
 
-Demo login after seed: `demo@molvaani.app` / `demo1234`
+No sign-in. `/login`, `/signup`, and `/app/*` redirect to `/demo`.
 
 ## Architecture
 
@@ -52,10 +46,9 @@ Browser mic
   agora-rtm / toolkit → live transcripts
         │
         ▼
-Next.js (MolVaani Cloud)
+Next.js
   POST /api/token · /api/invite-agent · /api/stop-conversation
   POST /api/mcp  (pricing, competitor, CRM, calendar, escalate)
-  Auth · Orgs · AgentConfig · Leads · Usage (Prisma / SQLite)
 ```
 
 Managed models: Deepgram nova-3 · GPT-4o-mini · MiniMax speech-2.6-turbo.
@@ -114,7 +107,7 @@ Watch the orb, transcript, and action cards update live.
 - Agora Conversational AI (`agora-agents`) + RTC + RTM
 - Next.js 16 · React 19 · TypeScript · Tailwind
 - Prisma + SQLite (Postgres-ready)
-- JWT auth · MCP tools · Stripe billing stub
+- JWT cookie auth · MCP tools · Stripe billing stub
 
 ## Known limitations
 

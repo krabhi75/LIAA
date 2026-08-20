@@ -66,6 +66,8 @@ cloudflared tunnel --url http://localhost:3000
 
 ## Architecture
 
+Full write-up: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (diagrams, UIDs, tools, env, sequences, tradeoffs).
+
 ```text
 mic → Agora RTC → Conversational AI (ASR → LLM → TTS)
                       │  MCP tools
@@ -77,6 +79,8 @@ mic → Agora RTC → Conversational AI (ASR → LLM → TTS)
 
 Voice stays on Agora managed models (Deepgram · GPT-4o-mini · MiniMax).  
 Unlike upstream nova-agora, this build does **not** use a custom Groq OpenAI-compat callback — that keeps Conversational AI as the voice engine.
+
+Demo shot list: [docs/DEMO.md](docs/DEMO.md) · Submission paste: [docs/SUBMISSION.md](docs/SUBMISSION.md)
 
 ## vs nova-agora
 

@@ -1,19 +1,17 @@
 # 3–5 minute demo video shot list
 
-EchoSphere requires a 3–5 minute demo video **and** a live demo. Do not submit a prerecord-only walkthrough as the judging demo.
-
-Record the screen at http://localhost:3000/demo with system audio + mic.
+Record the screen at **http://localhost:3000/demo** with system audio + mic. Ensure Cloudflare tunnel is up and the bar shows **tools live**.
 
 | Time | What to show | What to say |
 |---|---|---|
-| 0:00–0:20 | Title card: MolVaani (मोलवाणी), PS21, Agora Conversational AI | One sentence: the voice that closes the sauda — live agent, not a chatbot |
-| 0:20–0:40 | Architecture diagram (Whimsical) | Agora owns the channel, barge-in, STT/LLM/TTS. Our server starts the agent and runs tools |
-| 0:40–1:00 | Click Start live call, allow mic, Maya greets | Point at “interrupt anytime” |
-| 1:00–1:30 | Ask pricing, then interrupt with Slack/Teams | Show barge-in; Maya stops and compares |
-| 1:30–2:10 | Change seat count | Maya re-prices; CRM seats field updates |
-| 2:10–2:50 | Ask for an enterprise demonstration | Tool call `book_demo` or `upsert_crm_lead`; outcome pill changes |
-| 2:50–3:20 | Open human specialist | Context summary visible; join same channel; Stop Maya |
-| 3:20–3:50 | Recap | Interruptions, memory, tools, CRM, escalation, Agora-central |
-| 3:50–4:10 | Known limitation | In-memory CRM; MCP needs public HTTPS URL |
+| 0:00–0:20 | Title: **Liaa** · Agora Conversational AI | Personal voice assistant that speaks, listens, and acts — not a sales bot |
+| 0:20–0:45 | Architecture (see `docs/ARCHITECTURE.md` diagram) | Agora owns RTC, barge-in, STT/LLM/TTS; our server starts the agent and runs MCP tools |
+| 0:45–1:05 | **Start conversation**, allow mic, Liaa greets | Point at Start/Stop and live transcript |
+| 1:05–1:40 | “What does my day look like?” | Calendar tool + action card (DEMO DATA badge) |
+| 1:40–2:20 | “Book a sync with Rahul tomorrow at four” | Linked actions / progress if tools chain |
+| 2:20–2:50 | “What’s in my inbox?” or “Remember my name is …” | Mail or memory tool lands on the right |
+| 2:50–3:20 | Interrupt mid-sentence | Barge-in — Liaa stops and listens |
+| 3:20–3:50 | Recap | Agora-central voice · tools on screen · honest DEMO DATA |
+| 3:50–4:10 | Known limit | Real Google Calendar/Gmail optional later; tunnel needed for tools |
 
-If a live call fails on recording day, keep this video as backup **and** still do a live attempt in evaluation.
+If a live call fails on recording day, keep this video as backup **and** still attempt a live run in evaluation.

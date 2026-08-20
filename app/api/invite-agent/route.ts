@@ -16,10 +16,10 @@ import {
 } from "@/lib/agora";
 import { getSession } from "@/lib/auth";
 import { AGENT_UID } from "@/lib/ids";
-import { FAILURE_MESSAGE, novaGreeting } from "@/lib/prompt";
+import { FAILURE_MESSAGE, liaaGreeting } from "@/lib/prompt";
 import { ensureDemoTenant, getDefaultAgentForOrg, recordUsage } from "@/lib/saas";
 import { bindSessionMeta, setAgentId } from "@/lib/store";
-import { buildNovaSystemPrompt, TOOL_NAMES } from "@/lib/tools";
+import { buildLiaaSystemPrompt, TOOL_NAMES } from "@/lib/tools";
 import { prisma } from "@/lib/db";
 import { loadMemories } from "@/lib/memory";
 
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       base.includes("127.0.0.1");
     const mcpAttached = Boolean(mcpEndpoint && !localhost);
     const toolKey = config.mcpKey || mcpKey();
-    const systemPrompt = await buildNovaSystemPrompt(channel);
-    const greeting = await novaGreeting();
+    const systemPrompt = await buildLiaaSystemPrompt(channel);
+    const greeting = await liaaGreeting();
 
     const llm = new OpenAI({
       model: config.llmModel || "gpt-4o-mini",
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     const agent = new Agent({
       client: agoraClient(),
-      turnDetection: { language: "hi-IN" },
+      turnDetection: { language: "en-US" },
       interruption: { enable: true, mode: InterruptionModeStartOfSpeech },
       advancedFeatures: {
         enable_rtm: true,
@@ -117,16 +117,16 @@ export async function POST(req: NextRequest) {
       .withStt(
         new DeepgramSTT({
           model: config.sttModel || "nova-3",
-          language: "hi",
+          language: "en",
         } as ConstructorParameters<typeof DeepgramSTT>[0]),
       )
       .withLlm(llm)
       .withTts(
         new MiniMaxTTS({
           model: config.ttsModel || "speech-2.6-turbo",
-          // Hindi-capable female voice when available on managed MiniMax
           voiceId:
             config.ttsVoiceId ||
+            process.env.LIAA_TTS_VOICE ||
             process.env.NOVA_TTS_VOICE ||
             "English_captivating_female1",
         } as ConstructorParameters<typeof MiniMaxTTS>[0]),

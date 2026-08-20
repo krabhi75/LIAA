@@ -2,7 +2,7 @@ import { prisma } from "./db";
 import {
   FAILURE_MESSAGE,
   GREETING,
-  NOVA_INSTRUCTIONS,
+  LIAA_INSTRUCTIONS,
 } from "./prompt";
 import { mcpKey } from "./agora";
 
@@ -36,8 +36,20 @@ export async function getAgentBySlug(orgSlug: string, agentSlug: string) {
 }
 
 export async function ensureDemoTenant() {
-  const email = "demo@nova.app";
+  const email = "demo@liaa.app";
   let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    // migrate legacy demo email if present
+    const legacy = await prisma.user.findUnique({
+      where: { email: "demo@nova.app" },
+    });
+    if (legacy) {
+      user = await prisma.user.update({
+        where: { id: legacy.id },
+        data: { email },
+      });
+    }
+  }
   if (!user) {
     const { hashPassword, provisionOrgForUser } = await import("./auth");
     user = await prisma.user.create({
@@ -49,7 +61,7 @@ export async function ensureDemoTenant() {
     });
     await provisionOrgForUser({
       userId: user.id,
-      orgName: "Nova Demo",
+      orgName: "Liaa Demo",
       email,
     });
   }
@@ -79,10 +91,10 @@ export async function ensureDemoTenant() {
     agent = await prisma.agentConfig.create({
       data: {
         workspaceId: ws.id,
-        name: "Nova",
-        slug: "nova",
+        name: "Liaa",
+        slug: "liaa",
         greeting: GREETING,
-        systemPrompt: NOVA_INSTRUCTIONS,
+        systemPrompt: LIAA_INSTRUCTIONS,
         failureMessage: FAILURE_MESSAGE,
         mcpKey: mcpKey(),
       },
@@ -91,12 +103,21 @@ export async function ensureDemoTenant() {
     agent = await prisma.agentConfig.update({
       where: { id: agent.id },
       data: {
-        name: "Nova",
-        slug: agent.slug === "maya" ? "nova" : agent.slug,
+        name: "Liaa",
+        slug:
+          agent.slug === "maya" || agent.slug === "nova" ? "liaa" : agent.slug,
         greeting: GREETING,
-        systemPrompt: NOVA_INSTRUCTIONS,
+        systemPrompt: LIAA_INSTRUCTIONS,
         failureMessage: FAILURE_MESSAGE,
       },
+    });
+  }
+
+  // Keep org display name current for demos
+  if (membership.org.name.includes("Nova") || membership.org.name.includes("Maya")) {
+    await prisma.organization.update({
+      where: { id: membership.org.id },
+      data: { name: "Liaa Demo" },
     });
   }
 

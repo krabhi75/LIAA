@@ -5,11 +5,11 @@ import { useEffect, useMemo, useRef } from "react";
 type Mode = "standby" | "idle" | "listening" | "thinking" | "speaking";
 
 const LABELS: Record<Mode, string> = {
-  standby: "प्रतीक्षा",
-  idle: "आपकी आवाज़ का इंतज़ार",
-  listening: "सुन रहा है",
-  thinking: "काम कर रहा है",
-  speaking: "बोल रहा है",
+  standby: "standby",
+  idle: "listening for you",
+  listening: "listening",
+  thinking: "working",
+  speaking: "speaking",
 };
 
 export function NovaOrb({
@@ -144,7 +144,7 @@ export function NovaOrb({
       </svg>
       <div className="nova-state">
         <span className="nova-state__text" ref={stateRef}>
-          प्रतीक्षा
+          standby
         </span>
       </div>
     </div>

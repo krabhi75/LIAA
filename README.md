@@ -1,4 +1,4 @@
-# Nova
+# Liaa
 
 A voice assistant that **speaks, listens, and acts** — on **Agora Conversational AI**.
 
@@ -9,7 +9,7 @@ Inspired by [vaivikop/nova-agora](https://github.com/vaivikop/nova-agora): same 
 
 ---
 
-## What Nova does
+## What Liaa does
 
 | You say | What happens |
 |---|---|
@@ -20,17 +20,17 @@ Inspired by [vaivikop/nova-agora](https://github.com/vaivikop/nova-agora): same 
 | "Open YouTube" | `open_tab` (trusted hosts auto-open; others ask) |
 | "Remember my name is Abhishek" | `remember` → durable `.nova-memory.json` |
 
-Seeded calendar/mail results carry a visible **DEMO DATA** badge — Nova will not pretend a Meet link is real Google.
+Seeded calendar/mail results carry a visible **DEMO DATA** badge — Liaa will not pretend a Meet link is real Google.
 
 ## Live desk
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ NOVA · agent · tools                                 End    │
+│ LIAA · agent · tools                    Start / Stop        │
 ├──────────────┬──────────────────────────┬───────────────────┤
 │ Transcript   │         ORB              │ Actions           │
-│ YOU / NOVA   │   listening / speaking   │ calendar · mail   │
-│              │ AGORA · channel · rtt    │ DEMO DATA badges  │
+│ YOU / LIAA   │   listening / speaking   │ calendar · mail   │
+│              │ AGORA · channel · rtt    │ linked progress   │
 └──────────────┴──────────────────────────┴───────────────────┘
 ```
 

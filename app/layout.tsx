@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nova — voice assistant on Agora",
+  title: "Liaa — voice assistant on Agora",
   description:
     "Speaks, listens, acts. Calendar, mail, tabs, and memory via Agora Conversational AI.",
 };

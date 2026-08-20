@@ -47,7 +47,7 @@ function cardFromTool(tool: string, output: unknown, at: string, i: number): Act
     return {
       key: `${at}-${tool}-${i}`,
       at,
-      verb: embedded.verb ?? "किया",
+      verb: embedded.verb ?? "Did",
       kind: embedded.kind ?? tool,
       title: embedded.title,
       detail: embedded.detail ?? "",
@@ -60,7 +60,7 @@ function cardFromTool(tool: string, output: unknown, at: string, i: number): Act
   return {
     key: `${at}-${tool}-${i}`,
     at,
-    verb: "टूल",
+    verb: "Tool",
     kind: tool,
     title: tool,
     detail: "",
@@ -116,7 +116,7 @@ export function MolVaaniDesk({
   const call = useAetherCall(channel, CUSTOMER_UID, { agentConfigId });
   const [gateOpen, setGateOpen] = useState(true);
   const [gateHint, setGateHint] = useState(
-    "Nova को आपके माइक्रोफ़ोन की ज़रूरत है। एक बार अनुमति दें — फिर बात शुरू करें।",
+    "Liaa needs your microphone. Allow it once, then start the conversation.",
   );
   const [booting, setBooting] = useState(true);
   const [showWake, setShowWake] = useState(false);
@@ -186,7 +186,7 @@ export function MolVaaniDesk({
         }
         if (p.state === "denied") {
           setGateHint(
-            "इस साइट के लिए माइक्रोफ़ोन ब्लॉक है। एड्रेस बार में Allow करें, फिर पेज रीलोड करें।",
+            "Microphone is blocked for this site. Allow it in the address bar, then reload.",
           );
         }
       } catch {
@@ -210,20 +210,20 @@ export function MolVaaniDesk({
     setGateOpen(true);
     setShowWake(true);
     setBooting(false);
-    setGateHint("बातचीत बंद। जब तैयार हों, फिर से शुरू करें।");
+    setGateHint("Conversation ended. Start again when you are ready.");
   }
 
   return (
     <div className="nova-app">
       <header className="nova-bar">
-        <span className="nova-mark">NOVA</span>
+        <span className="nova-mark">LIAA</span>
         <span className={`nova-dot ${agentLive ? "nova-dot--on" : ""}`}>
-          {agentLive ? "एजेंट लाइव" : "एजेंट"}
+          {agentLive ? "agent live" : "agent"}
         </span>
         <span
           className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : "nova-dot--warn"}`}
         >
-          {call.mcpAttached ? "टूल लाइव" : "टूल ऑफलाइन"}
+          {call.mcpAttached ? "tools live" : "tools offline"}
         </span>
         <span className="nova-bar__spacer" />
         {call.error ? (
@@ -237,8 +237,8 @@ export function MolVaaniDesk({
             disabled={call.connecting}
           >
             <span className="nova-ctrl">
-              बातचीत बंद करें
-              <small>Stop conversation</small>
+              Stop conversation
+              <small>End call and transcription</small>
             </span>
           </button>
         ) : (
@@ -249,8 +249,8 @@ export function MolVaaniDesk({
             disabled={call.connecting || booting}
           >
             <span className="nova-ctrl">
-              {call.connecting || booting ? "जोड़ रहे हैं…" : "बातचीत शुरू करें"}
-              <small>Start conversation</small>
+              {call.connecting || booting ? "Connecting…" : "Start conversation"}
+              <small>Wake Liaa</small>
             </span>
           </button>
         )}
@@ -259,15 +259,15 @@ export function MolVaaniDesk({
       <section className="nova-transcript" ref={transcriptRef as never}>
         <div className="nova-panel-head">
           <div>
-            <div className="nova-label-hi">लाइव ट्रांसक्रिप्ट</div>
-            <span className="nova-label">Hindi · realtime</span>
+            <div className="nova-label-hi">Live transcript</div>
+            <span className="nova-label">English · realtime</span>
           </div>
-          {call.connected ? <span className="nova-live-pill">लाइव</span> : null}
+          {call.connected ? <span className="nova-live-pill">Live</span> : null}
         </div>
         {call.transcripts.length === 0 ? (
           <p className="nova-empty">
-            अभी कुछ नहीं। माइक ऑन करके हिंदी या हिंग्लिश में बोलें — कैलेंडर, मेल, या याद
-            रखवाने के लिए कहें। ट्रांसक्रिप्ट यहाँ तुरंत दिखेगा।
+            Nothing yet. Turn on the mic and talk — ask about your day, book a
+            meeting, or read mail. Transcript appears here in realtime.
           </p>
         ) : (
           call.transcripts.map((line, i) => (
@@ -278,8 +278,8 @@ export function MolVaaniDesk({
               }`}
             >
               <span className="nova-turn__who">
-                {line.role === "agent" ? "नोवा" : "आप"}
-                {!line.final ? " · लिख रहा है…" : ""}
+                {line.role === "agent" ? "LIAA" : "YOU"}
+                {!line.final ? " · typing…" : ""}
               </span>
               <p className="nova-turn__text">{line.text}</p>
             </div>
@@ -316,8 +316,8 @@ export function MolVaaniDesk({
             onClick={stopConversation}
           >
             <span className="nova-ctrl">
-              बातचीत बंद · ट्रांसक्रिप्ट रोकें
-              <small>Stop conversation & transcription</small>
+              Stop conversation
+              <small>Stop transcription</small>
             </span>
           </button>
         ) : null}
@@ -326,15 +326,15 @@ export function MolVaaniDesk({
       <aside className="nova-log" ref={logRef as never}>
         <div className="nova-log__head">
           <div>
-            <div className="nova-label-hi">क्रियाएँ · प्रगति</div>
-            <span className="nova-label">linked actions</span>
+            <div className="nova-label-hi">Actions · progress</div>
+            <span className="nova-label">linked tools</span>
           </div>
           <span className="nova-label">{cardsChrono.length || ""}</span>
         </div>
         {chains.length === 0 ? (
           <p className="nova-empty">
-            जब Nova कई काम एक साथ करेगा (जैसे कैलेंडर पढ़ो → मीटिंग बनाओ → मेल ड्राफ्ट),
-            यहाँ चरण-दर-चरण प्रगति दिखेगी। DEMO DATA बैज = डेमो डेटा।
+            When Liaa chains several tools (read calendar → create meeting → draft
+            mail), progress shows here step by step. DEMO DATA badge = seeded demo.
           </p>
         ) : (
           chains.map((chain, chainIdx) => {
@@ -382,7 +382,7 @@ export function MolVaaniDesk({
               <div key={chain.id} className="nova-chain">
                 <div className="nova-chain__top">
                   <span className="nova-chain__title">
-                    {isLive ? "लिंक की गई क्रियाएँ चल रही हैं" : "लिंक की गई क्रियाएँ पूरी"}
+                    {isLive ? "Linked actions in progress" : "Linked actions complete"}
                   </span>
                   <span className="nova-chain__meta">
                     {chain.done}/{chain.total} · {pct}%
@@ -397,9 +397,8 @@ export function MolVaaniDesk({
                 <div className="nova-steps">
                   {chain.cards.map((c, stepIdx) => {
                     const isLast = stepIdx === chain.cards.length - 1;
-                    const stepClass = isLive && isLast
-                      ? "nova-step--active"
-                      : "nova-step--done";
+                    const stepClass =
+                      isLive && isLast ? "nova-step--active" : "nova-step--done";
                     return (
                       <div key={c.key} className={`nova-step ${stepClass}`}>
                         <div className="nova-step__rail">
@@ -413,7 +412,7 @@ export function MolVaaniDesk({
                         >
                           <div className="nova-card__head">
                             <span className="nova-card__verb">
-                              चरण {stepIdx + 1}/{chain.total} · {c.verb}
+                              Step {stepIdx + 1}/{chain.total} · {c.verb}
                             </span>
                             {c.demo ? (
                               <span className="nova-card__demo">DEMO DATA</span>
@@ -448,11 +447,11 @@ export function MolVaaniDesk({
 
       {gateOpen && !call.connected ? (
         <div className="nova-gate">
-          <div className="nova-gate__mark">NOVA</div>
+          <div className="nova-gate__mark">LIAA</div>
           <p className="nova-gate__sub">{gateHint}</p>
           <div className="nova-gate__row">
             <span className={`nova-dot ${call.mcpAttached ? "nova-dot--on" : ""}`}>
-              टूल
+              tools
             </span>
             <span className="nova-dot nova-dot--on">agora</span>
           </div>
@@ -463,11 +462,11 @@ export function MolVaaniDesk({
               onClick={startConversation}
               disabled={call.connecting}
             >
-              {call.connecting ? "जोड़ रहे हैं…" : "बातचीत शुरू करें"}
+              {call.connecting ? "Connecting…" : "Start conversation"}
             </button>
           ) : null}
           {booting || call.connecting ? (
-            <p className="nova-label">शुरू हो रहा है…</p>
+            <p className="nova-label">initialising…</p>
           ) : null}
           {call.error ? <p className="nova-gate__err">{call.error}</p> : null}
         </div>

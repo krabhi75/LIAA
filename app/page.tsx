@@ -4,7 +4,7 @@ export default function LandingPage() {
   return (
     <div className="saas-paper min-h-screen">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <div className="nova-mark">NOVA</div>
+        <div className="nova-mark">LIAA</div>
         <Link
           href="/demo"
           className="nova-btn nova-btn--primary"
@@ -25,8 +25,8 @@ export default function LandingPage() {
           className="mt-4 max-w-xl text-lg text-[var(--ink-3)]"
           style={{ lineHeight: 1.6 }}
         >
-          Your voice assistant — calendar, mail, tabs, memory. Not a sales rep.
-          Layout and product shape from{" "}
+          Liaa — your voice assistant for calendar, mail, tabs, and memory. Not a
+          sales rep. Layout inspired by{" "}
           <a
             href="https://github.com/vaivikop/nova-agora"
             className="text-[var(--nova)]"
@@ -39,7 +39,7 @@ export default function LandingPage() {
         </p>
         <div className="mt-8">
           <Link href="/demo" className="nova-btn nova-btn--primary">
-            Wake Nova
+            Wake Liaa
           </Link>
         </div>
 
@@ -55,7 +55,7 @@ export default function LandingPage() {
             },
             {
               title: "Not sales",
-              body: "No lead qualification pitch. Nova is a personal assistant that does things.",
+              body: "No lead qualification pitch. Liaa is a personal assistant that does things.",
             },
           ].map((item) => (
             <div key={item.title}>

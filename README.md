@@ -80,7 +80,8 @@ mic → Agora RTC → Conversational AI (ASR → LLM → TTS)
 Voice stays on Agora managed models (Deepgram · GPT-4o-mini · MiniMax).  
 Unlike upstream nova-agora, this build does **not** use a custom Groq OpenAI-compat callback — that keeps Conversational AI as the voice engine.
 
-Demo shot list: [docs/DEMO.md](docs/DEMO.md) · Submission paste: [docs/SUBMISSION.md](docs/SUBMISSION.md)
+Demo shot list: [docs/DEMO.md](docs/DEMO.md) · Submission paste: [docs/SUBMISSION.md](docs/SUBMISSION.md)  
+Account / chat handoff: [docs/CHAT_HANDOFF.md](docs/CHAT_HANDOFF.md)
 
 ## vs nova-agora
 

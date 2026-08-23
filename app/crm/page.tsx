@@ -119,8 +119,12 @@ export default function CrmPage() {
         <p className="nova-label">Field CRM · Vobiz · expert desk</p>
         <h1 className="mt-2 text-3xl font-semibold">Farmer cases. Call. Escalate.</h1>
         <p className="mt-2 max-w-xl text-sm text-[var(--ink-3)]">
-          Cases open from the Agora desk or a Vobiz phone call. Hangup sets
-          disposition. PUBLIC_BASE_URL must be a public HTTPS tunnel.
+          Full Agora conversation on the phone: finish{" "}
+          <a href="/telephony" className="text-[var(--agora)]">
+            SIP setup
+          </a>
+          . CRM Dial still uses XML if SIP campaign is not launched. Hangup can
+          update disposition.
         </p>
         {error ? <p className="nova-gate__err mt-4">{error}</p> : null}
 

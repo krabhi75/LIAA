@@ -32,7 +32,7 @@ export function xmlResponse(xml: string): Response {
 export function vobizConfig() {
   const authId = process.env.VOBIZ_AUTH_ID ?? "";
   const token = process.env.VOBIZ_AUTH_TOKEN ?? "";
-  const from = process.env.VOBIZ_FROM_NUMBER ?? "+911171366938";
+  const from = process.env.VOBIZ_FROM_NUMBER ?? "+917971443138";
   return { authId, token, from };
 }
 

@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Liaa — voice assistant on Agora",
+  title: "Liaa — field voice for farmers",
   description:
-    "Speaks, listens, acts. Calendar, mail, tabs, and memory via Agora Conversational AI.",
+    "Hindi/Hinglish agri assistant on Agora Conversational AI, with Vobiz phone inbound and outbound.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

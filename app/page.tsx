@@ -33,6 +33,9 @@ export default function LandingPage() {
           <Link href="/demo" className="nova-btn nova-btn--primary">
             Wake Liaa
           </Link>
+          <Link href="/telephony" className="nova-btn">
+            Phone SIP
+          </Link>
           <Link href="/crm" className="nova-btn nova-btn--start">
             Phone CRM
           </Link>

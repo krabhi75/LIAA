@@ -26,6 +26,7 @@ export type StoredCall = {
   phone: string;
   direction: string;
   vobizUuid: string | null;
+  vobizRequestUuid: string | null;
   status: string;
   disposition: string;
   hangupCause: string;
@@ -468,6 +469,7 @@ export async function createCall(input: {
   status?: string;
   disposition?: string;
   vobizUuid?: string | null;
+  vobizRequestUuid?: string | null;
   transcript?: string;
 }): Promise<StoredCall> {
   if (prismaOk()) {
@@ -480,6 +482,7 @@ export async function createCall(input: {
           status: input.status ?? "queued",
           disposition: input.disposition ?? "pending",
           vobizUuid: input.vobizUuid ?? undefined,
+          vobizRequestUuid: input.vobizRequestUuid ?? undefined,
           transcript: input.transcript ?? "",
         },
       });
@@ -494,6 +497,7 @@ export async function createCall(input: {
     phone: input.phone,
     direction: input.direction ?? "outbound",
     vobizUuid: input.vobizUuid ?? null,
+    vobizRequestUuid: input.vobizRequestUuid ?? null,
     status: input.status ?? "queued",
     disposition: input.disposition ?? "pending",
     hangupCause: "",
@@ -515,13 +519,21 @@ export async function findCallByUuid(uuid: string): Promise<StoredCall | null> {
   if (!uuid) return null;
   if (prismaOk()) {
     try {
-      const k = await prisma.crmCall.findFirst({ where: { vobizUuid: uuid } });
+      const k = await prisma.crmCall.findFirst({
+        where: {
+          OR: [{ vobizUuid: uuid }, { vobizRequestUuid: uuid }],
+        },
+      });
       if (k) return serializePrismaCall(k);
     } catch (e) {
       logPrisma("prisma", e);
     }
   }
-  return mem().calls.find((k) => k.vobizUuid === uuid) ?? null;
+  return (
+    mem().calls.find(
+      (k) => k.vobizUuid === uuid || k.vobizRequestUuid === uuid,
+    ) ?? null
+  );
 }
 
 /** Vobiz answer sends CallUUID; REST dial stores request_uuid — match both + recent ringing leg. */
@@ -580,6 +592,8 @@ export async function updateCall(
           phone: data.phone,
           direction: data.direction,
           vobizUuid: data.vobizUuid === null ? undefined : data.vobizUuid,
+          vobizRequestUuid:
+            data.vobizRequestUuid === null ? undefined : data.vobizRequestUuid,
           status: data.status,
           disposition: data.disposition,
           hangupCause: data.hangupCause,
@@ -695,6 +709,7 @@ function serializePrismaCall(k: {
   phone: string;
   direction: string;
   vobizUuid: string | null;
+  vobizRequestUuid?: string | null;
   status: string;
   disposition: string;
   hangupCause: string;
@@ -713,6 +728,7 @@ function serializePrismaCall(k: {
     phone: k.phone,
     direction: k.direction,
     vobizUuid: k.vobizUuid,
+    vobizRequestUuid: k.vobizRequestUuid ?? null,
     status: k.status,
     disposition: k.disposition,
     hangupCause: k.hangupCause,

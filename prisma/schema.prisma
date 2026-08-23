@@ -142,7 +142,8 @@ model CrmCall {
   contactId     String?
   phone         String
   direction     String      @default("outbound")
-  vobizUuid     String?     @unique
+  vobizUuid        String?     @unique
+  vobizRequestUuid String?
   status        String      @default("queued")
   disposition   String      @default("pending")
   hangupCause   String      @default("")

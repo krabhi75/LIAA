@@ -32,12 +32,16 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) §2 (RTC desk + mermaid) and [OUTBOUND_
 
 ## 5. Three-to-five-minute demonstration video
 
-Shot list: [DEMO.md](./DEMO.md). Suggested arc:
+Shot list: [DEMO.md](./DEMO.md). Judge script: [EVAL_RUNBOOK.md](./EVAL_RUNBOOK.md). Suggested arc:
 
 - 0:00 — Problem: farmers need Hindi voice help, not forms  
-- 0:30 — `/demo` Agora desk OR Agora campaign outbound (SIP)  
-- 1:30 — CRM dial → name → location → live weather on farmer profile  
-- 2:30 — Expert case / timeline on farmer record  
+- 0:30 — **`/demo` Agora desk** (hero — Deepgram listening)  
+- 1:30 — Optional CRM dial → farmer timeline (Vobiz XML; press `#` after speaking)  
+- 2:30 — Expert case / weather on farmer record when speech lands  
+- 3:30 — Two outbound paths in one sentence ([OUTBOUND_PATHS.md](./OUTBOUND_PATHS.md))  
+- 4:00 — Limits: CRM Gather ASR vendor-dependent; `/demo` is listening proof  
+
+Backup: [DEMO_90S.md](./DEMO_90S.md) / https://liaa-ebon.vercel.app/reel
 - 3:30 — Architecture recap + honest limits  
 
 ---

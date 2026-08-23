@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     });
     const call = await updateCall(row.id, {
       vobizUuid: placed.requestUuid || `pending-${row.id}`,
+      vobizRequestUuid: placed.requestUuid || null,
       status: "ringing",
     });
     return NextResponse.json({ call: call ?? row, from, farmerId: farmer?.id ?? null });

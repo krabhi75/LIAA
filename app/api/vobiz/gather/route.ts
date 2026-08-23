@@ -63,16 +63,24 @@ export async function POST(req: Request) {
       void (async () => {
         try {
           const { persistPhoneTurn } = await import("@/lib/phone-agent");
-          const { findCallByUuid, updateCall } = await import("@/lib/crm-store");
+          const { findCallForVobizWebhook, updateCall } = await import(
+            "@/lib/crm-store"
+          );
           await persistPhoneTurn(uuid, speech, turn);
           if (!speech) {
-            const call = await findCallByUuid(uuid);
+            const call =
+              (await findCallForVobizWebhook({
+                callUuid: params.CallUUID || params.call_uuid,
+                requestUuid: params.RequestUUID || params.request_uuid,
+                calleePhone: params.To || params.to || params.From || params.from,
+              })) ?? null;
             if (call) {
               const dbg = gatherDebugLine(params);
               await updateCall(call.id, {
                 transcript: call.transcript
                   ? `${call.transcript}\n${dbg}`
                   : dbg,
+                vobizUuid: params.CallUUID || call.vobizUuid,
               });
             }
           } else {

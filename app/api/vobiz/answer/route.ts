@@ -34,7 +34,10 @@ async function markAnswered(params: Record<string, string>) {
   await updateCall(existing.id, {
     status: "in-progress",
     answeredAt: new Date().toISOString(),
-    vobizUuid: callUuid || requestUuid || existing.vobizUuid,
+    // Keep request uuid; promote CallUUID as primary media id when present.
+    vobizUuid: callUuid || existing.vobizUuid,
+    vobizRequestUuid:
+      existing.vobizRequestUuid || requestUuid || existing.vobizUuid,
   });
 }
 

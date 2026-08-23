@@ -1,17 +1,19 @@
 # 3–5 minute demo video shot list
 
-Record the screen at **http://localhost:3000/demo** with system audio + mic. Ensure Cloudflare tunnel is up and the bar shows **tools live**.
+Prefer **production**: https://liaa-ebon.vercel.app/demo (system audio + mic).  
+Local only if tunnel is up and the bar shows **tools live**.
 
 | Time | What to show | What to say |
 |---|---|---|
-| 0:00–0:20 | Title: **Liaa** · Agora Conversational AI | Personal voice assistant that speaks, listens, and acts — not a sales bot |
-| 0:20–0:45 | Architecture (see `docs/ARCHITECTURE.md` diagram) | Agora owns RTC, barge-in, STT/LLM/TTS; our server starts the agent and runs MCP tools |
-| 0:45–1:05 | **Start conversation**, allow mic, Liaa greets in Hindi | Point at English Start/Stop chrome; Hindi voice |
-| 1:05–1:40 | “आज का दिन कैसा दिखता है?” | Calendar tool + English action card (DEMO DATA) |
-| 1:40–2:20 | “Rahul से कल चार बजे meeting book करो” | Linked actions / progress if tools chain |
-| 2:20–2:50 | Inbox / remember in Hinglish | Mail or memory tool lands on the right |
-| 2:50–3:20 | Interrupt mid-sentence | Barge-in — Liaa stops and listens |
-| 3:20–3:50 | Recap | Agora-central voice · tools on screen · honest DEMO DATA |
-| 3:50–4:10 | Known limit | Real Google Calendar/Gmail optional later; tunnel needed for tools |
+| 0:00–0:20 | Title: **KrishiSaathi / Liaa** · Agora Conversational AI | Hindi voice agri assistant + field CRM — not a sales bot |
+| 0:20–0:45 | Architecture (see `docs/ARCHITECTURE.md`) | Agora owns RTC, barge-in, STT/LLM/TTS; our server starts the agent and runs MCP |
+| 0:45–1:05 | **Start conversation**, allow mic, Liaa greets in Hindi | English chrome; Hindi voice |
+| 1:05–1:40 | Name → city → crop problem in Hinglish | Turn-taking + transcript |
+| 1:40–2:20 | Weather / CRM tool if MCP fires | Action card on the right |
+| 2:20–2:50 | Interrupt mid-sentence | Barge-in — Liaa stops and listens |
+| 2:50–3:20 | Optional: `/crm` Call (PSTN) | Separate Vobiz XML path — farmer timeline |
+| 3:20–3:50 | Recap | Agora-central voice · CRM for field ops · honest DEMO DATA |
+| 3:50–4:10 | Known limit | CRM Gather ASR may need `#`; `/demo` is the listening proof |
 
-If a live call fails on recording day, keep this video as backup **and** still attempt a live run in evaluation.
+Backup reel: https://liaa-ebon.vercel.app/reel — see [DEMO_90S.md](./DEMO_90S.md).  
+Judge script: [EVAL_RUNBOOK.md](./EVAL_RUNBOOK.md).

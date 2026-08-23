@@ -22,6 +22,7 @@ Agora Campaign CSV → Agora Conversational AI agent → SIP → Vobiz trunk →
 1. Agora → Phone number → **Inbound agent** must **not** be Unassigned (same number is used for SIP legs).
 2. Vobiz number must **not** stay on XML Voice App **test** (SIP and XML fight).
 3. Run campaign from Agora with your mobile in the CSV — not from `/crm` dial.
+4. Paste agent prompt + VAD (~900–1200 ms end silence) + MCP `https://liaa-ebon.vercel.app/api/mcp` per [AGORA_CONSOLE.md](./AGORA_CONSOLE.md).
 
 ---
 
@@ -32,9 +33,11 @@ Agora Campaign CSV → Agora Conversational AI agent → SIP → Vobiz trunk →
 ```
 
 | What updates | **https://liaa-ebon.vercel.app** dashboard + `/crm/calls` + farmer profile timeline |
-| Voice engine | **Vobiz XML** — Polly.Aditi TTS + hi-IN Gather STT (not Agora CAI on this leg) |
-| Language | Devanagari Hindi greeting; KrishiSaathi name → location → weather flow |
-| When to use | Live farmer CRM, weather capture, expert case creation, outbound from farmer list |
+| Voice engine | **Vobiz XML** — WOMAN TTS (en-US) + Gather ASR (`en-IN`, `dtmf speech`, finish `#`) |
+| Language | Roman Hindi prompts; name → location → help; weather after XML via `persistPhoneTurn` |
+| When to use | Live farmer CRM write, weather on profile, expert case — **not** the primary “AI listens” demo |
+
+**STT honesty (Aug 2026):** If CRM transcripts show empty `lastSpeech` / `DBG:` lines, Vobiz is not returning `Speech` for the leg. That is **account/ASR**, not Vercel cold start. Workarounds: speak then press **`#`**, or DTMF **`1` `#`**. Hero listening demo remains **`/demo`**.
 
 **This path will never appear in Agora Campaign analytics.**
 
@@ -52,6 +55,6 @@ Agora Campaign CSV → Agora Conversational AI agent → SIP → Vobiz trunk →
 
 ## Recommended hackathon story
 
-1. **Agora Conversational AI (mandatory):** `/demo` desk **or** Agora Campaign outbound with SIP trunk configured per [VOBIZ_AGORA.md](./VOBIZ_AGORA.md).
-2. **External action:** CRM dial shows weather API + farmer record update + optional expert case (Path B).
-3. Say clearly in the video: *“Campaign stats are Agora-native outbound; our CRM dialer is a separate Vobiz XML leg for field ops.”*
+1. **Agora Conversational AI (mandatory):** `/demo` desk **or** Agora Campaign outbound with SIP trunk configured per [VOBIZ_AGORA.md](./VOBIZ_AGORA.md). Follow [EVAL_RUNBOOK.md](./EVAL_RUNBOOK.md).
+2. **External action:** CRM dial shows PSTN place + farmer record update (weather when speech lands).
+3. Say clearly: *“Campaign stats are Agora-native outbound; our CRM dialer is a separate Vobiz XML leg for field ops.”*

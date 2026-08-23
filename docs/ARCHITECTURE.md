@@ -239,7 +239,7 @@ Auth/console routes under `/app/*` redirect or stub toward the public desk for t
 
 | Decision | Why | Tradeoff |
 |---|---|---|
-| Agora-managed models only | Meets track rules; less glue | Less TTS voice shopping |
+| Deepgram + OpenAI + ElevenLabs via Agora | Clear vendor story for judges | Needs `ELEVENLABS_API_KEY` on host |
 | Demo calendar/mail | Fast, reliable for judging | Not production Google |
 | Public `/demo` without login | Frictionless live demo | No multi-tenant auth on the desk |
 | Cloudflare tunnel for MCP | Agora cloud → tools | Tunnel URL changes when restarted |

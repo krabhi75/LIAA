@@ -28,6 +28,11 @@ export const VOBIZ_STT_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_STT_LANGUAGE?.trim()) ||
   "en-US";
 
+/** Kept for compatibility; not emitted on Gather while debugging disconnects. */
+export const VOBIZ_SPEECH_MODEL = "phone_call";
+export const VOBIZ_GATHER_HINTS =
+  "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem";
+
 /** Roman Hindi / English — ASCII only. */
 export const KRISHI_ANSWER_GREETING =
   "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam kya hai?";

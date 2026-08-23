@@ -33,7 +33,8 @@ export function handlePhoneSpeechFast(
   if (!t) {
     if (c.stage === "name") {
       return {
-        speak: "Sunai nahi diya. Aapka naam boliye.",
+        speak:
+          "Sunai nahi diya. Naam boliye, ya phone par 1 dabakar hash press kijiye.",
         hangup: false,
         conv: c,
       };
@@ -66,7 +67,7 @@ export function handlePhoneSpeechFast(
     c.name = cleanName(t) || t;
     c.stage = "place";
     return {
-      speak: `Namaste ${c.name} ji. Aap kis city ya district mein hain?`,
+      speak: `Namaste ${c.name} ji. Aap kis city ya district mein hain? Bol ke hash dabaiye.`,
       hangup: false,
       conv: c,
       capture: { name: c.name },
@@ -77,7 +78,7 @@ export function handlePhoneSpeechFast(
     c.place = t;
     c.stage = "help";
     return {
-      speak: `Theek hai ${c.name} ji. Location note kar li. Bataiye, kheti mein kis cheez mein madad chahiye?`,
+      speak: `Theek hai ${c.name} ji. Location note kar li. Kheti mein kis cheez mein madad chahiye? Bol ke hash dabaiye.`,
       hangup: false,
       conv: c,
       capture: { name: c.name, place: t },

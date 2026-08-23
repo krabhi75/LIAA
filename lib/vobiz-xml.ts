@@ -24,10 +24,10 @@ export const VOBIZ_GATHER_HINTS =
   "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem,ramesh,abhishek";
 
 export const KRISHI_ANSWER_GREETING =
-  "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam kya hai?";
+  "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam boliye, aur bolne ke baad hash button dabaiye.";
 
 export const KRISHI_NO_HEAR =
-  "Sunai nahi aayi. Ek baar phir boliye.";
+  "Awaaz clear nahi aayi. Naam boliye, phir hash dabaiye.";
 
 function xmlEscape(text: string): string {
   return text
@@ -62,15 +62,15 @@ export function speakXml(text: string): string {
 }
 
 /**
- * Speak inside Gather. On miss: retry same gather URL — never Redirect to /answer
- * (that replays the full opening in a loop).
+ * dtmf speech + finishOnKey=# helps Vobiz finalize Hindi utterances on PSTN.
+ * Omit speechModel to use provider default when phone_call returns empty Speech.
  */
 export function speakGatherXml(prompt: string, actionUrl: string): string {
   const retryUrl = gatherRetryUrl(actionUrl);
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<Response>` +
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${xmlEscape(VOBIZ_STT_LANGUAGE)}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="5" executionTimeout="25" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">` +
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="dtmf speech" language="${xmlEscape(VOBIZ_STT_LANGUAGE)}" speechEndTimeout="auto" executionTimeout="30" finishOnKey="#" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">` +
     speakXml(prompt) +
     `</Gather>` +
     speakXml(KRISHI_NO_HEAR) +

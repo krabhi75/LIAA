@@ -19,10 +19,32 @@ export function speechFromVobizParams(params: Record<string, string>): string {
     "";
   if (raw.trim()) return raw.trim();
   const inputType = (params.InputType || params.inputType || "").toLowerCase();
-  if (inputType === "dtmf" || params.Digits || params.digits) {
-    return (params.Digits || params.digits || "").trim();
+  const digits = (params.Digits || params.digits || "").trim();
+  if (inputType === "dtmf" || digits) {
+    if (digits === "1") return "haan ji";
+    if (digits === "2") return "nahi";
+    return digits;
   }
   return "";
+}
+
+/** For CRM debug when Vobiz sends empty Speech. */
+export function gatherDebugLine(params: Record<string, string>): string {
+  const keys = [
+    "InputType",
+    "Speech",
+    "Digits",
+    "SpeechConfidenceScore",
+    "UnstableSpeech",
+    "StableSpeech",
+  ];
+  const bits = keys
+    .map((k) => {
+      const v = params[k] ?? params[k.toLowerCase()] ?? "";
+      return v ? `${k}=${String(v).slice(0, 40)}` : "";
+    })
+    .filter(Boolean);
+  return bits.length ? `DBG: ${bits.join(" | ")}` : "DBG: empty gather";
 }
 
 function envOr(key: string, fallback = ""): string {

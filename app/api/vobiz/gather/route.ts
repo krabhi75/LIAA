@@ -6,7 +6,7 @@ import {
   phoneConvFromParams,
   retryPromptForStage,
 } from "@/lib/phone-session";
-import { parseVobizBody, speechFromVobizParams } from "@/lib/vobiz";
+import { parseVobizBody, speechFromVobizParams, gatherDebugLine } from "@/lib/vobiz";
 import {
   hangupXml,
   speakGatherXml,
@@ -63,8 +63,19 @@ export async function POST(req: Request) {
       void (async () => {
         try {
           const { persistPhoneTurn } = await import("@/lib/phone-agent");
+          const { findCallByUuid, updateCall } = await import("@/lib/crm-store");
           await persistPhoneTurn(uuid, speech, turn);
-          if (speech) {
+          if (!speech) {
+            const call = await findCallByUuid(uuid);
+            if (call) {
+              const dbg = gatherDebugLine(params);
+              await updateCall(call.id, {
+                transcript: call.transcript
+                  ? `${call.transcript}\n${dbg}`
+                  : dbg,
+              });
+            }
+          } else {
             console.info("[vobiz/gather]", {
               uuid,
               stage: turn.conv.stage,

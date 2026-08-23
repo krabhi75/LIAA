@@ -37,9 +37,12 @@ export default function LandingPage() {
           </a>
           ; voice on Agora Conversational AI.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/demo" className="nova-btn nova-btn--primary">
             Wake Liaa
+          </Link>
+          <Link href="/crm" className="nova-btn nova-btn--start">
+            Phone CRM
           </Link>
         </div>
 

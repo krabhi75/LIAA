@@ -115,6 +115,39 @@ model Lead {
   @@index([orgId, status])
 }
 
+model CrmContact {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String
+  company   String    @default("")
+  notes     String    @default("")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  calls     CrmCall[]
+
+  @@index([phone])
+}
+
+model CrmCall {
+  id            String      @id @default(cuid())
+  contactId     String?
+  phone         String
+  direction     String      @default("outbound")
+  vobizUuid     String?     @unique
+  status        String      @default("queued")
+  disposition   String      @default("pending")
+  hangupCause   String      @default("")
+  transcript    String      @default("")
+  lastSpeech    String      @default("")
+  startedAt     DateTime    @default(now())
+  answeredAt    DateTime?
+  endedAt       DateTime?
+  contact       CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([disposition])
+}
+
 model UsageEvent {
   id        String       @id @default(cuid())
   orgId     String

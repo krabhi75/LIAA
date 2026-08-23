@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import {
   KRISHI_ANSWER_GREETING,
-  speakGatherXml,
+  answerSpeakGatherXml,
   voiceBase,
   xmlResponse,
 } from "@/lib/vobiz-xml";
@@ -13,7 +13,7 @@ export const maxDuration = 10;
 /** Instant Voice XML — no Prisma / agora-agents imports on this path. */
 function answerXml(req: Request): Response {
   const action = `${voiceBase(req)}/api/vobiz/gather`;
-  return xmlResponse(speakGatherXml(KRISHI_ANSWER_GREETING, action));
+  return xmlResponse(answerSpeakGatherXml(KRISHI_ANSWER_GREETING, action));
 }
 
 export async function POST(req: Request) {

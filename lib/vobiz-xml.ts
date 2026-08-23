@@ -5,13 +5,19 @@
 
 export const VOBIZ_PUBLIC_ORIGIN = "https://liaa-ebon.vercel.app";
 
-/** Keep call alive: WOMAN+en-IN. Polly.Aditi is optional via env once Vobiz enables Polly. */
+/**
+ * TTS — Vobiz basic Speak only allows WOMAN/MAN + listed langs (no en-IN, no hi-IN).
+ * Invalid language (e.g. WOMAN+en-IN) drops the call on answer.
+ * Default WOMAN+en-US keeps the leg up. Set VOBIZ_TTS_VOICE=Polly.Aditi for Indian accent
+ * when the Vobiz account has Polly enabled (no language attr needed for Polly.*).
+ */
 export const VOBIZ_TTS_VOICE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_VOICE?.trim()) ||
   "WOMAN";
+/** Only used for non-Polly voices. Must be a documented Speak language (en-US, en-GB, …). */
 export const VOBIZ_TTS_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_LANGUAGE?.trim()) ||
-  "en-IN";
+  "en-US";
 
 /** Gather ASR — Hindi. Allowed model: phone_call (not "telephony"). */
 export const VOBIZ_STT_LANGUAGE = "hi-IN";
@@ -20,7 +26,7 @@ export const VOBIZ_SPEECH_MODEL = "phone_call";
 export const VOBIZ_GATHER_HINTS =
   "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem";
 
-/** Roman Hindi — ASCII only. Devanagari has broken TTS on some Vobiz accounts and dropped calls. */
+/** Roman Hindi — ASCII. Works with Polly.Aditi and with WOMAN+en-US. */
 export const KRISHI_ANSWER_GREETING =
   "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam kya hai?";
 
@@ -54,24 +60,55 @@ export function speakXml(text: string): string {
   if (voice.startsWith("Polly.")) {
     return `<Speak voice="${xmlEscape(voice)}">${xmlEscape(text)}</Speak>`;
   }
-  return `<Speak voice="${xmlEscape(voice)}" language="${xmlEscape(VOBIZ_TTS_LANGUAGE)}">${xmlEscape(text)}</Speak>`;
+  // Non-Polly: never emit en-IN / hi-IN — those are not valid Speak languages.
+  const lang =
+    VOBIZ_TTS_LANGUAGE === "en-IN" || VOBIZ_TTS_LANGUAGE === "hi-IN"
+      ? "en-US"
+      : VOBIZ_TTS_LANGUAGE;
+  return `<Speak voice="${xmlEscape(voice)}" language="${xmlEscape(lang)}">${xmlEscape(text)}</Speak>`;
 }
 
-export function speakGatherXml(prompt: string, actionUrl: string): string {
-  const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
-  const recordCb = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/recording");
-  const record =
-    `<Record fileFormat="mp3" recordSession="true" maxLength="3600" playBeep="false" redirect="false" ` +
-    `callbackUrl="${xmlEscape(recordCb)}" callbackMethod="POST"/>`;
+function sessionRecordXml(callbackUrl: string): string {
   return (
-    `<?xml version="1.0" encoding="UTF-8"?>` +
-    `<Response>` +
-    record +
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${VOBIZ_STT_LANGUAGE}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="auto" executionTimeout="25" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">` +
+    `<Record fileFormat="mp3" recordSession="true" maxLength="3600" playBeep="false" redirect="false" ` +
+    `callbackUrl="${xmlEscape(callbackUrl)}" callbackMethod="POST"/>`
+  );
+}
+
+function gatherInner(prompt: string, actionUrl: string): string {
+  return (
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${VOBIZ_STT_LANGUAGE}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="4" executionTimeout="30" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">` +
     speakXml(prompt) +
     `</Gather>` +
     speakXml(KRISHI_NO_HEAR) +
-    `<Redirect>${xmlEscape(answerUrl)}</Redirect>` +
+    `<Redirect>${xmlEscape(actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer"))}</Redirect>`
+  );
+}
+
+/**
+ * Answer URL only — start session recording once, then Speak+Gather.
+ * Do NOT put Record on every Gather turn (re-Record drops the PSTN leg).
+ */
+export function answerSpeakGatherXml(
+  prompt: string,
+  actionUrl: string,
+): string {
+  const recordCb = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/recording");
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Response>` +
+    sessionRecordXml(recordCb) +
+    gatherInner(prompt, actionUrl) +
+    `</Response>`
+  );
+}
+
+/** Gather / turn replies — Speak+Gather only (no Record). */
+export function speakGatherXml(prompt: string, actionUrl: string): string {
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Response>` +
+    gatherInner(prompt, actionUrl) +
     `</Response>`
   );
 }

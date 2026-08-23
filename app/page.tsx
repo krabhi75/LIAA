@@ -12,6 +12,11 @@ import {
   when,
 } from "@/components/stitch/crm";
 import { MetricTile, PageHeader } from "@/components/stitch/crm-ui";
+import {
+  buildCropBuckets,
+  buildIssueBuckets,
+  collectInsightTexts,
+} from "@/lib/dashboard-insights";
 
 async function fetchCrm(path: string) {
   const res = await fetch(`${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`, {
@@ -84,39 +89,20 @@ export default function DashboardPage() {
     { label: "Expert escalated", value: escalated },
   ];
 
-  const crops = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const row of cases) {
-      const crop = (row.crop || "Unknown").trim() || "Unknown";
-      map.set(crop, (map.get(crop) ?? 0) + 1);
-    }
-    const list = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const total = list.reduce((n, [, v]) => n + v, 0) || 1;
-    return list.map(([name, count]) => ({
-      name,
-      count,
-      pct: Math.round((count / total) * 100),
-    }));
-  }, [cases]);
+  const insightTexts = useMemo(
+    () => collectInsightTexts(cases, calls, contacts),
+    [cases, calls, contacts],
+  );
 
-  const issues = useMemo(() => {
-    const keys = [
-      ["disease", "Crop disease"],
-      ["pani|water|irrig", "Irrigation"],
-      ["keeda|pest", "Pest control"],
-      ["khad|fert", "Fertilizer"],
-      ["scheme|yojana", "Schemes"],
-    ] as const;
-    const buckets = keys.map(([re, label]) => {
-      const rx = new RegExp(re, "i");
-      const n = cases.filter((c) =>
-        rx.test(`${c.summary} ${c.symptoms ?? ""} ${c.crop}`),
-      ).length;
-      return { label, n };
-    });
-    const total = buckets.reduce((s, b) => s + b.n, 0) || 1;
-    return buckets.map((b) => ({ ...b, pct: Math.round((b.n / total) * 100) }));
-  }, [cases]);
+  const crops = useMemo(
+    () => buildCropBuckets(cases, calls, contacts),
+    [cases, calls, contacts],
+  );
+
+  const issues = useMemo(
+    () => buildIssueBuckets(insightTexts),
+    [insightTexts],
+  );
 
   return (
     <Shell title="Overview">
@@ -211,7 +197,8 @@ export default function DashboardPage() {
           <div className="ks-record-panel__body">
           {issues.every((i) => i.n === 0) ? (
             <p className="text-sm text-ks-muted">
-              Issues fill in as farmers speak on the call.
+              Issues appear from call transcripts and case summaries (Hindi /
+              Hinglish). Place a call or open a case on a farmer record.
             </p>
           ) : (
             <div className="space-y-4">
@@ -242,7 +229,10 @@ export default function DashboardPage() {
           </div>
           <div className="ks-record-panel__body">
           {crops.length === 0 ? (
-            <p className="text-sm text-ks-muted">Crops appear from case intake.</p>
+            <p className="text-sm text-ks-muted">
+              Crops are inferred from speech (e.g. kapas, dhan, gehun) and
+              farmer profiles. Updates every 3s with new calls.
+            </p>
           ) : (
             <div className="space-y-3">
               {crops.map((c) => (

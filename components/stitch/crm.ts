@@ -44,6 +44,7 @@ export type AgriCase = {
   phone?: string;
   summary: string;
   symptoms?: string;
+  transcript?: string;
 };
 
 export async function jsonSafe(

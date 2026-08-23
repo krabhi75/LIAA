@@ -10,6 +10,7 @@ import {
   isInbound,
   isLive,
   jsonSafe,
+  when,
 } from "@/components/stitch/crm";
 
 function Card({
@@ -48,24 +49,40 @@ function Card({
   );
 }
 
+async function fetchCrm(path: string) {
+  const res = await fetch(`${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`, {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache" },
+  });
+  return jsonSafe(res);
+}
+
 export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [cases, setCases] = useState<AgriCase[]>([]);
   const [hello, setHello] = useState("Good evening");
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const [cRes, kRes, aRes] = await Promise.all([
-      fetch("/api/crm/contacts"),
-      fetch("/api/crm/calls"),
-      fetch("/api/crm/cases"),
-    ]);
-    const c = await jsonSafe(cRes);
-    const k = await jsonSafe(kRes);
-    const a = await jsonSafe(aRes);
-    setContacts((c.contacts as Contact[]) ?? []);
-    setCalls((k.calls as Call[]) ?? []);
-    setCases((a.cases as AgriCase[]) ?? []);
+    try {
+      const [c, k, a] = await Promise.all([
+        fetchCrm("/api/crm/contacts"),
+        fetchCrm("/api/crm/calls"),
+        fetchCrm("/api/crm/cases"),
+      ]);
+      setContacts((c.contacts as Contact[]) ?? []);
+      setCalls((k.calls as Call[]) ?? []);
+      setCases((a.cases as AgriCase[]) ?? []);
+      setUpdatedAt(new Date().toISOString());
+      setError("");
+    } catch {
+      setError("Could not refresh CRM snapshot");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -77,18 +94,43 @@ export default function DashboardPage() {
       }).format(new Date()),
     );
     if (hour < 12) setHello("Good morning");
+    else if (hour < 17) setHello("Good afternoon");
     else setHello("Good evening");
+
     void load();
-    const t = setInterval(() => void load(), 4000);
-    return () => clearInterval(t);
+    const t = setInterval(() => void load(), 3000);
+    const onFocus = () => void load();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void load();
+    });
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [load]);
 
   const live = calls.filter((c) => isLive(c.status)).length;
   const inbound = calls.filter((c) => isInbound(c.direction)).length;
   const outbound = calls.length - inbound;
   const escalated = cases.filter((c) => c.status === "escalated").length;
-  const open = cases.filter((c) => c.status === "open" || !c.status).length;
-  const resolved = Math.max(cases.length - escalated, 0);
+  const closed = cases.filter((c) =>
+    ["closed", "resolved", "completed"].includes((c.status || "").toLowerCase()),
+  ).length;
+  const open = cases.filter((c) => {
+    const s = (c.status || "open").toLowerCase();
+    return s === "open" || s === "";
+  }).length;
+  const lastCall = calls[0];
+
+  const funnelMax = Math.max(calls.length, cases.length, 1);
+  const funnel = [
+    { label: "Total calls", value: calls.length },
+    { label: "Inbound conversations", value: inbound },
+    { label: "Cases opened", value: cases.length },
+    { label: "Closed / resolved", value: closed },
+    { label: "Expert required", value: escalated },
+  ];
 
   const crops = useMemo(() => {
     const map = new Map<string, number>();
@@ -126,21 +168,37 @@ export default function DashboardPage() {
 
   return (
     <Shell title="Overview">
-      <header className="mb-6">
-        <h2 className="ks-display text-3xl font-bold text-ks-on-surface md:text-4xl">
-          {hello}, Abhishek
-        </h2>
-        <p className="mt-2 max-w-3xl text-base text-ks-muted md:text-lg">
-          Live field operations across Liaa voice, inbound DID, and outbound CRM
-          dials.
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="ks-display text-3xl font-bold text-ks-on-surface md:text-4xl">
+            {hello}, Abhishek
+          </h2>
+          <p className="mt-2 max-w-3xl text-base text-ks-muted md:text-lg">
+            Live field operations across Liaa voice, inbound DID, and outbound CRM
+            dials.
+          </p>
+        </div>
+        <div className="text-right text-sm text-ks-muted">
+          <p>
+            {loading ? "Loading…" : "Live CRM"} · refreshes every 3s
+          </p>
+          <p>{updatedAt ? `Updated ${when(updatedAt)}` : "—"}</p>
+          {error ? <p className="text-ks-error">{error}</p> : null}
+          <button
+            type="button"
+            className="mt-1 text-ks-primary underline"
+            onClick={() => void load()}
+          >
+            Refresh now
+          </button>
+        </div>
       </header>
 
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card
           label="Total farmers"
           value={contacts.length}
-          hint="In this desk"
+          hint="From /api/crm/contacts"
           icon="groups"
         />
         <Card
@@ -165,14 +223,18 @@ export default function DashboardPage() {
         <Card
           label="Open cases"
           value={open}
-          hint={`${cases.length} total cases`}
+          hint={`${cases.length} total · ${closed} closed`}
           icon="folder_open"
         />
         <Card
-          label="Voice desk"
-          value="Hindi"
-          hint="Hinglish spoken path"
-          icon="translate"
+          label="Last activity"
+          value={lastCall ? when(lastCall.startedAt) : "—"}
+          hint={
+            lastCall
+              ? `${lastCall.phone} · ${lastCall.status}`
+              : "No calls yet"
+          }
+          icon="schedule"
         />
       </section>
 
@@ -181,18 +243,18 @@ export default function DashboardPage() {
           <h3 className="ks-display text-xl font-semibold">Call mix</h3>
           <p className="text-sm text-ks-muted">Inbound vs outbound from live CRM</p>
           <div className="mt-8 flex h-48 items-end gap-8 px-4">
-            <Bar label="Inbound" h={inbound} max={Math.max(calls.length, 1)} color="bg-ks-primary" />
+            <Bar label="Inbound" h={inbound} max={funnelMax} color="bg-ks-primary" />
             <Bar
               label="Outbound"
               h={outbound}
-              max={Math.max(calls.length, 1)}
+              max={funnelMax}
               color="bg-ks-secondary"
             />
-            <Bar label="Live" h={live} max={Math.max(calls.length, 1)} color="bg-ks-mint" />
+            <Bar label="Live" h={live} max={funnelMax} color="bg-ks-mint" />
             <Bar
               label="Cases"
               h={cases.length}
-              max={Math.max(cases.length, calls.length, 1)}
+              max={funnelMax}
               color="bg-ks-primary-container"
             />
           </div>
@@ -200,12 +262,15 @@ export default function DashboardPage() {
 
         <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 shadow-[0_2px_4px_rgba(0,0,0,0.04)] lg:col-span-4">
           <h3 className="ks-display text-xl font-semibold">Escalation funnel</h3>
-          <p className="mb-4 text-sm text-ks-muted">From this desk snapshot</p>
-          <FunnelStep label="Total calls" value={calls.length} width="100%" />
-          <FunnelStep label="Inbound conversations" value={inbound} width="90%" />
-          <FunnelStep label="Cases opened" value={cases.length} width="80%" />
-          <FunnelStep label="Resolved / closed" value={resolved} width="70%" />
-          <FunnelStep label="Expert required" value={escalated} width="60%" />
+          <p className="mb-4 text-sm text-ks-muted">Widths follow live counts</p>
+          {funnel.map((step) => (
+            <FunnelStep
+              key={step.label}
+              label={step.label}
+              value={step.value}
+              pct={Math.max(18, Math.round((step.value / funnelMax) * 100))}
+            />
+          ))}
         </div>
 
         <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 lg:col-span-6">
@@ -220,7 +285,9 @@ export default function DashboardPage() {
                 <div key={i.label}>
                   <div className="mb-1 flex justify-between text-sm">
                     <span>{i.label}</span>
-                    <span className="text-ks-muted">{i.pct}%</span>
+                    <span className="text-ks-muted">
+                      {i.n} · {i.pct}%
+                    </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-ks-low">
                     <div
@@ -271,7 +338,7 @@ function Bar({
   max: number;
   color: string;
 }) {
-  const pct = Math.max(8, Math.round((h / max) * 100));
+  const pct = Math.max(h > 0 ? 8 : 2, Math.round((h / Math.max(max, 1)) * 100));
   return (
     <div className="flex h-full flex-1 flex-col items-center justify-end gap-2">
       <div className={`w-full rounded-t-sm ${color}`} style={{ height: `${pct}%` }} />
@@ -284,14 +351,14 @@ function Bar({
 function FunnelStep({
   label,
   value,
-  width,
+  pct,
 }: {
   label: string;
   value: number;
-  width: string;
+  pct: number;
 }) {
   return (
-    <div className="mx-auto mb-2" style={{ width }}>
+    <div className="mx-auto mb-2" style={{ width: `${pct}%` }}>
       <div className="flex items-center justify-between rounded-lg border border-ks-outline bg-ks-low px-3 py-2">
         <span className="text-sm">{label}</span>
         <span className="text-sm font-bold text-ks-primary">{value}</span>

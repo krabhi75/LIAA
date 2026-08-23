@@ -30,9 +30,9 @@ export default function FarmersPage() {
   const load = useCallback(async () => {
     try {
       const [cRes, kRes, aRes] = await Promise.all([
-        fetch("/api/crm/contacts"),
-        fetch("/api/crm/calls"),
-        fetch("/api/crm/cases"),
+        fetch(`/api/crm/contacts?_=${Date.now()}`, { cache: "no-store" }),
+        fetch(`/api/crm/calls?_=${Date.now()}`, { cache: "no-store" }),
+        fetch(`/api/crm/cases?_=${Date.now()}`, { cache: "no-store" }),
       ]);
       const c = await jsonSafe(cRes);
       const k = await jsonSafe(kRes);

@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { createContact, listContacts } from "@/lib/crm-store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function liveJson(body: unknown) {
+  return NextResponse.json(body, {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    },
+  });
+}
+
 export async function GET() {
   const contacts = await listContacts();
-  return NextResponse.json({ contacts });
+  return liveJson({ contacts, at: new Date().toISOString() });
 }
 
 export async function POST(req: Request) {
@@ -20,5 +31,5 @@ export async function POST(req: Request) {
     phone: body.phone,
     company: body.company,
   });
-  return NextResponse.json({ contact });
+  return liveJson({ contact });
 }

@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { listCalls, updateCall } from "@/lib/crm-store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function liveJson(body: unknown) {
+  return NextResponse.json(body, {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    },
+  });
+}
+
 export async function GET() {
   const calls = await listCalls();
-  return NextResponse.json({ calls });
+  return liveJson({ calls, at: new Date().toISOString() });
 }
 
 export async function PATCH(req: Request) {
@@ -15,5 +26,5 @@ export async function PATCH(req: Request) {
   if (!call) {
     return NextResponse.json({ error: "call not found" }, { status: 404 });
   }
-  return NextResponse.json({ call });
+  return liveJson({ call });
 }

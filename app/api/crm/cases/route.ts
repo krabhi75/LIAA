@@ -6,8 +6,20 @@ import {
   setAgriCaseStatus,
 } from "@/lib/agri-cases";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function liveJson(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    },
+  });
+}
+
 export async function GET() {
-  return NextResponse.json({ cases: await listAgriCases() });
+  return liveJson({ cases: await listAgriCases(), at: new Date().toISOString() });
 }
 
 export async function POST(req: Request) {

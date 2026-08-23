@@ -210,6 +210,9 @@ export default function CrmPage() {
           <Link href="/demo" className="nova-btn">
             Agora desk
           </Link>
+          <Link href="/whatsapp" className="nova-btn">
+            WhatsApp
+          </Link>
           <Link href="/telephony" className="nova-btn">
             SIP
           </Link>

@@ -260,6 +260,19 @@ export async function createCall(input: {
   return row;
 }
 
+export async function findCallByUuid(uuid: string): Promise<StoredCall | null> {
+  if (!uuid) return null;
+  if (prismaOk()) {
+    try {
+      const k = await prisma.crmCall.findFirst({ where: { vobizUuid: uuid } });
+      if (k) return serializePrismaCall(k);
+    } catch {
+      /* fall through */
+    }
+  }
+  return mem().calls.find((k) => k.vobizUuid === uuid) ?? null;
+}
+
 export async function updateCall(
   id: string,
   data: Partial<Omit<StoredCall, "id" | "startedAt">>,

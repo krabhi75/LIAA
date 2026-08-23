@@ -74,6 +74,9 @@ export default function CrmPage() {
     vobizWebhook?: string;
     agoraWebhook?: string;
     hangupUrl?: string;
+    answerUrl?: string;
+    inboundTrunkWebhook?: string;
+    outboundTrunkWebhook?: string;
   }>({});
 
   const load = useCallback(async () => {
@@ -103,6 +106,9 @@ export default function CrmPage() {
           vobizWebhook: d.vobizWebhook,
           agoraWebhook: d.agoraWebhook,
           hangupUrl: d.hangupUrl,
+          answerUrl: d.answerUrl,
+          inboundTrunkWebhook: d.inboundTrunkWebhook,
+          outboundTrunkWebhook: d.outboundTrunkWebhook,
         }),
       );
     const t = setInterval(() => void load(), 4000);
@@ -217,43 +223,70 @@ export default function CrmPage() {
         <p className="nova-label">Field CRM · Vercel · expert desk</p>
         <h1 className="mt-2 text-3xl font-semibold">Farmer cases. Call. Escalate.</h1>
         <p className="mt-2 max-w-2xl text-sm text-[var(--ink-3)]">
-          Desk tool calls and phone hangups land here. Paste the webhook URLs
-          into Vobiz inbound and Agora post-call — not Zoho.
+          Call this number uses Vobiz XML (answer + hangup URLs in the API).
+          Farmer dial-in uses SIP trunks — paste the trunk webhook, not a Voice
+          App Answer URL, on the DID.
         </p>
 
-        {hooks.vobizWebhook ? (
-          <div className="nova-card mt-5">
-            <div className="nova-card__head">
-              <span className="nova-card__verb">Webhooks</span>
-              <span className="nova-card__kind">liaa-ebon.vercel.app</span>
-            </div>
-            <p className="nova-card__detail break-all">
-              Vobiz: {hooks.vobizWebhook}
-            </p>
-            <p className="nova-card__detail break-all">
-              Agora: {hooks.agoraWebhook}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                className="nova-btn"
-                type="button"
-                onClick={() => void copy("vobiz", hooks.vobizWebhook)}
-              >
-                Copy Vobiz
-              </button>
-              <button
-                className="nova-btn"
-                type="button"
-                onClick={() => void copy("agora", hooks.agoraWebhook)}
-              >
-                Copy Agora
-              </button>
-              {copied ? (
-                <span className="nova-card__detail">Copied {copied}</span>
-              ) : null}
-            </div>
+        <div className="nova-card mt-5">
+          <div className="nova-card__head">
+            <span className="nova-card__verb">Vobiz URLs</span>
+            <span className="nova-card__kind">inbound · outbound</span>
           </div>
-        ) : null}
+          <p className="nova-card__detail break-all">
+            Inbound trunk POST URL:{" "}
+            {hooks.inboundTrunkWebhook ??
+              "https://liaa-ebon.vercel.app/api/webhooks/vobiz"}
+          </p>
+          <p className="nova-card__detail break-all">
+            Outbound trunk POST URL:{" "}
+            {hooks.outboundTrunkWebhook ??
+              "https://liaa-ebon.vercel.app/api/webhooks/vobiz"}
+          </p>
+          <p className="nova-card__detail break-all">
+            CRM Dial Answer URL:{" "}
+            {hooks.answerUrl ?? "https://liaa-ebon.vercel.app/api/vobiz/answer"}
+          </p>
+          <p className="nova-card__detail break-all">
+            CRM Dial Hangup URL:{" "}
+            {hooks.hangupUrl ?? "https://liaa-ebon.vercel.app/api/vobiz/hangup"}
+          </p>
+          <p className="nova-card__detail break-all">
+            Agora post-call:{" "}
+            {hooks.agoraWebhook ?? "https://liaa-ebon.vercel.app/api/webhooks/agora"}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className="nova-btn"
+              type="button"
+              onClick={() =>
+                void copy(
+                  "inbound",
+                  hooks.inboundTrunkWebhook ??
+                    "https://liaa-ebon.vercel.app/api/webhooks/vobiz",
+                )
+              }
+            >
+              Copy inbound
+            </button>
+            <button
+              className="nova-btn"
+              type="button"
+              onClick={() =>
+                void copy(
+                  "outbound",
+                  hooks.outboundTrunkWebhook ??
+                    "https://liaa-ebon.vercel.app/api/webhooks/vobiz",
+                )
+              }
+            >
+              Copy outbound
+            </button>
+            {copied ? (
+              <span className="nova-card__detail">Copied {copied}</span>
+            ) : null}
+          </div>
+        </div>
 
         <form className="mt-8 flex flex-wrap gap-3" onSubmit={addContact}>
           <input

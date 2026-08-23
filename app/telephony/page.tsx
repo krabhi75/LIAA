@@ -26,6 +26,9 @@ export default function TelephonyPage() {
     hangupUrl: string | null;
     vobizWebhook?: string | null;
     agoraWebhook?: string | null;
+    answerUrl?: string | null;
+    inboundTrunkWebhook?: string | null;
+    outboundTrunkWebhook?: string | null;
     agoraSbc: string;
   } | null>(null);
 
@@ -76,10 +79,53 @@ export default function TelephonyPage() {
             Outbound trunk {cfg?.outboundTrunkId ?? "a4dc1a99-2efa-4f52-b481-5dfd99aca03d"}
           </div>
           <div className="nova-card__detail">
-            CRM Vobiz webhook: {cfg?.vobizWebhook ?? "set PUBLIC_BASE_URL"}
+            Inbound trunk {cfg?.inboundTrunkId ?? "c56b68cd-591f-4196-92df-e9e7a34aae9b"}
+          </div>
+        </article>
+
+        <article className="nova-card mt-4">
+          <div className="nova-card__head">
+            <span className="nova-card__verb">Inbound webhook</span>
+            <span className="nova-card__kind">SIP trunk</span>
+          </div>
+          <p className="nova-card__detail">
+            Vobiz → SIP → Inbound trunks → Liaa Testing → Webhook Configuration →
+            POST URL (events: incoming.ringing / answered / ended).
+          </p>
+          <code className="nova-card__detail mt-2 block break-all">
+            {cfg?.inboundTrunkWebhook ??
+              "https://liaa-ebon.vercel.app/api/webhooks/vobiz"}
+          </code>
+          <p className="nova-card__detail mt-2">
+            Do not set a Voice App Answer URL on +917971443138. That steals the
+            call from Agora.
+          </p>
+        </article>
+
+        <article className="nova-card mt-4">
+          <div className="nova-card__head">
+            <span className="nova-card__verb">Outbound webhook</span>
+            <span className="nova-card__kind">SIP trunk + CRM Dial</span>
+          </div>
+          <p className="nova-card__detail">
+            Vobiz → SIP → Outbound trunks → + Add Webhook / POST URL (started /
+            answered / ended). Same CRM endpoint:
+          </p>
+          <code className="nova-card__detail mt-2 block break-all">
+            {cfg?.outboundTrunkWebhook ??
+              "https://liaa-ebon.vercel.app/api/webhooks/vobiz"}
+          </code>
+          <p className="nova-card__detail mt-3">
+            CRM <strong>Call this number</strong> does not use the Voice App.
+            Liaa already sends these on each API dial:
+          </p>
+          <div className="nova-card__detail mt-1">
+            Answer URL:{" "}
+            {cfg?.answerUrl ?? "https://liaa-ebon.vercel.app/api/vobiz/answer"}
           </div>
           <div className="nova-card__detail">
-            CRM Agora webhook: {cfg?.agoraWebhook ?? "set PUBLIC_BASE_URL"}
+            Hangup URL:{" "}
+            {cfg?.hangupUrl ?? "https://liaa-ebon.vercel.app/api/vobiz/hangup"}
           </div>
         </article>
 
@@ -109,7 +155,11 @@ export default function TelephonyPage() {
           </li>
           <li>
             Vobiz → Inbound trunk → that URI → Link Numbers → +917971443138.
-            Optional hangup webhook: <code>{cfg?.hangupUrl ?? "/api/vobiz/hangup"}</code>
+            Webhook POST URL:{" "}
+            <code>
+              {cfg?.inboundTrunkWebhook ??
+                "https://liaa-ebon.vercel.app/api/webhooks/vobiz"}
+            </code>
           </li>
           <li>
             Agora → that number → Inbound Settings → inbound agent = Liaa.

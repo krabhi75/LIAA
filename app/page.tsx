@@ -1,70 +1,291 @@
-import Link from "next/link";
+"use client";
 
-export default function LandingPage() {
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Shell } from "@/components/stitch/Shell";
+import { Icon } from "@/components/stitch/Icon";
+import {
+  type AgriCase,
+  type Call,
+  type Contact,
+  isInbound,
+  isLive,
+  jsonSafe,
+} from "@/components/stitch/crm";
+
+function Card({
+  label,
+  value,
+  hint,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  hint: string;
+  icon: string;
+  accent?: boolean;
+}) {
   return (
-    <div className="saas-paper min-h-screen">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <div className="nova-mark">LIAA</div>
-        <Link
-          href="/demo"
-          className="nova-btn nova-btn--primary"
-          style={{ padding: "8px 16px", fontSize: 13 }}
-        >
-          Open desk
-        </Link>
+    <div
+      className={`rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-[0_2px_4px_rgba(0,0,0,0.04)] ${accent ? "relative overflow-hidden" : ""}`}
+    >
+      {accent ? (
+        <div className="absolute bottom-0 left-0 top-0 w-1 bg-ks-secondary" />
+      ) : null}
+      <div className={`flex items-start justify-between ${accent ? "pl-2" : ""}`}>
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-ks-muted">
+          {label}
+        </p>
+        <span className="rounded-md bg-ks-low p-1 text-ks-primary-container">
+          <Icon name={icon} />
+        </span>
+      </div>
+      <h3 className={`ks-display mt-2 text-3xl font-semibold ${accent ? "pl-2" : ""}`}>
+        {value}
+      </h3>
+      <p className={`mt-1 text-sm text-ks-muted ${accent ? "pl-2" : ""}`}>{hint}</p>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [cases, setCases] = useState<AgriCase[]>([]);
+
+  const load = useCallback(async () => {
+    const [cRes, kRes, aRes] = await Promise.all([
+      fetch("/api/crm/contacts"),
+      fetch("/api/crm/calls"),
+      fetch("/api/crm/cases"),
+    ]);
+    const c = await jsonSafe(cRes);
+    const k = await jsonSafe(kRes);
+    const a = await jsonSafe(aRes);
+    setContacts((c.contacts as Contact[]) ?? []);
+    setCalls((k.calls as Call[]) ?? []);
+    setCases((a.cases as AgriCase[]) ?? []);
+  }, []);
+
+  useEffect(() => {
+    void load();
+    const t = setInterval(() => void load(), 4000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const live = calls.filter((c) => isLive(c.status)).length;
+  const inbound = calls.filter((c) => isInbound(c.direction)).length;
+  const outbound = calls.length - inbound;
+  const escalated = cases.filter((c) => c.status === "escalated").length;
+  const open = cases.filter((c) => c.status === "open" || !c.status).length;
+  const resolved = Math.max(cases.length - escalated, 0);
+
+  const crops = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of cases) {
+      const crop = (row.crop || "Unknown").trim() || "Unknown";
+      map.set(crop, (map.get(crop) ?? 0) + 1);
+    }
+    const list = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const total = list.reduce((n, [, v]) => n + v, 0) || 1;
+    return list.map(([name, count]) => ({
+      name,
+      count,
+      pct: Math.round((count / total) * 100),
+    }));
+  }, [cases]);
+
+  const issues = useMemo(() => {
+    const keys = [
+      ["disease", "Crop disease"],
+      ["pani|water|irrig", "Irrigation"],
+      ["keeda|pest", "Pest control"],
+      ["khad|fert", "Fertilizer"],
+      ["scheme|yojana", "Schemes"],
+    ] as const;
+    const buckets = keys.map(([re, label]) => {
+      const rx = new RegExp(re, "i");
+      const n = cases.filter((c) =>
+        rx.test(`${c.summary} ${c.symptoms ?? ""} ${c.crop}`),
+      ).length;
+      return { label, n };
+    });
+    const total = buckets.reduce((s, b) => s + b.n, 0) || 1;
+    return buckets.map((b) => ({ ...b, pct: Math.round((b.n / total) * 100) }));
+  }, [cases]);
+
+  return (
+    <Shell title="Overview">
+      <header className="mb-6">
+        <h2 className="ks-display text-3xl font-bold text-ks-on-surface md:text-4xl">
+          Good morning, Abhishek
+        </h2>
+        <p className="mt-2 max-w-3xl text-base text-ks-muted md:text-lg">
+          Live field operations across Liaa voice, inbound DID, and outbound CRM
+          dials.
+        </p>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 pb-24 pt-20">
-        <p className="nova-label" style={{ color: "var(--nova)" }}>
-          PS1 · Agriculture & rural · Agora Conversational AI
-        </p>
-        <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-tight text-[var(--ink)]">
-          Voice for the field. Cases for the expert.
-        </h1>
-        <p
-          className="mt-4 max-w-xl text-lg text-[var(--ink-3)]"
-          style={{ lineHeight: 1.6 }}
-        >
-          Liaa talks to farmers in Hindi and Hinglish, asks follow-ups, pulls live
-          weather, opens a structured case, and escalates a human expert — so the
-          farmer never repeats the story.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/demo" className="nova-btn nova-btn--primary">
-            Wake Liaa
-          </Link>
-          <Link href="/telephony" className="nova-btn">
-            Phone SIP
-          </Link>
-          <Link href="/crm" className="nova-btn nova-btn--start">
-            Phone CRM
-          </Link>
+      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card
+          label="Total farmers"
+          value={contacts.length}
+          hint="In this desk"
+          icon="groups"
+        />
+        <Card
+          label="Calls logged"
+          value={calls.length}
+          hint={`${inbound} inbound · ${outbound} outbound`}
+          icon="call"
+        />
+        <Card
+          label="Live now"
+          value={live}
+          hint="Queued, ringing, or in progress"
+          icon="graphic_eq"
+          accent
+        />
+        <Card
+          label="Expert escalations"
+          value={escalated}
+          hint="Human agri expert needed"
+          icon="record_voice_over"
+        />
+        <Card
+          label="Open cases"
+          value={open}
+          hint={`${cases.length} total cases`}
+          icon="folder_open"
+        />
+        <Card
+          label="Voice desk"
+          value="Hindi"
+          hint="Hinglish spoken path"
+          icon="translate"
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 shadow-[0_2px_4px_rgba(0,0,0,0.04)] lg:col-span-8">
+          <h3 className="ks-display text-xl font-semibold">Call mix</h3>
+          <p className="text-sm text-ks-muted">Inbound vs outbound from live CRM</p>
+          <div className="mt-8 flex h-48 items-end gap-8 px-4">
+            <Bar label="Inbound" h={inbound} max={Math.max(calls.length, 1)} color="bg-ks-primary" />
+            <Bar
+              label="Outbound"
+              h={outbound}
+              max={Math.max(calls.length, 1)}
+              color="bg-ks-secondary"
+            />
+            <Bar label="Live" h={live} max={Math.max(calls.length, 1)} color="bg-ks-mint" />
+            <Bar
+              label="Cases"
+              h={cases.length}
+              max={Math.max(cases.length, calls.length, 1)}
+              color="bg-ks-primary-container"
+            />
+          </div>
         </div>
 
-        <section className="mt-20 grid gap-8 md:grid-cols-3">
-          {[
-            {
-              title: "Ask, don’t guess",
-              body: "Follow-ups for crop, village, symptoms, watering. Uncertainty is spoken out loud.",
-            },
-            {
-              title: "Live weather + case",
-              body: "Open-Meteo API, structured CRM case, expert escalation — visible on screen.",
-            },
-            {
-              title: "Phone + desk",
-              body: "Agora desk for judges. Vobiz call so a farmer can talk from a feature phone.",
-            },
-          ].map((item) => (
-            <div key={item.title}>
-              <h2 className="text-sm font-semibold text-[var(--ink)]">{item.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--ink-3)]">
-                {item.body}
-              </p>
+        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 shadow-[0_2px_4px_rgba(0,0,0,0.04)] lg:col-span-4">
+          <h3 className="ks-display text-xl font-semibold">Escalation funnel</h3>
+          <p className="mb-4 text-sm text-ks-muted">From this desk snapshot</p>
+          <FunnelStep label="Total calls" value={calls.length} width="100%" />
+          <FunnelStep label="Inbound conversations" value={inbound} width="90%" />
+          <FunnelStep label="Cases opened" value={cases.length} width="80%" />
+          <FunnelStep label="Resolved / closed" value={resolved} width="70%" />
+          <FunnelStep label="Expert required" value={escalated} width="60%" />
+        </div>
+
+        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 lg:col-span-6">
+          <h3 className="ks-display mb-4 text-xl font-semibold">Top farmer issues</h3>
+          {issues.every((i) => i.n === 0) ? (
+            <p className="text-sm text-ks-muted">
+              Issues fill in as farmers speak on the call.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {issues.map((i) => (
+                <div key={i.label}>
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span>{i.label}</span>
+                    <span className="text-ks-muted">{i.pct}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-ks-low">
+                    <div
+                      className="h-full rounded-full bg-ks-primary"
+                      style={{ width: `${Math.max(i.pct, i.n ? 8 : 0)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </section>
-      </main>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 lg:col-span-6">
+          <h3 className="ks-display mb-4 text-xl font-semibold">Crop focus</h3>
+          {crops.length === 0 ? (
+            <p className="text-sm text-ks-muted">Crops appear from case intake.</p>
+          ) : (
+            <div className="space-y-3">
+              {crops.map((c) => (
+                <div key={c.name} className="flex items-center gap-3">
+                  <span className="w-24 truncate text-sm">{c.name}</span>
+                  <div className="h-8 flex-1 overflow-hidden rounded-sm bg-ks-low">
+                    <div
+                      className="h-full bg-ks-primary"
+                      style={{ width: `${Math.max(c.pct, 10)}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-sm text-ks-muted">{c.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </Shell>
+  );
+}
+
+function Bar({
+  label,
+  h,
+  max,
+  color,
+}: {
+  label: string;
+  h: number;
+  max: number;
+  color: string;
+}) {
+  const pct = Math.max(8, Math.round((h / max) * 100));
+  return (
+    <div className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+      <div className={`w-full rounded-t-sm ${color}`} style={{ height: `${pct}%` }} />
+      <span className="text-[11px] text-ks-muted">{label}</span>
+      <span className="ks-display text-sm font-semibold">{h}</span>
+    </div>
+  );
+}
+
+function FunnelStep({
+  label,
+  value,
+  width,
+}: {
+  label: string;
+  value: number;
+  width: string;
+}) {
+  return (
+    <div className="mx-auto mb-2" style={{ width }}>
+      <div className="flex items-center justify-between rounded-lg border border-ks-outline bg-ks-low px-3 py-2">
+        <span className="text-sm">{label}</span>
+        <span className="text-sm font-bold text-ks-primary">{value}</span>
+      </div>
     </div>
   );
 }

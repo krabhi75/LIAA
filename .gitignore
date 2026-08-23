@@ -49,6 +49,7 @@ dev.db-journal
 .nova-memory.json
 .agri-cases.json
 .liaa-crm/
+.stitch-ui/
 
 # Local Cursor chat backups (may contain secrets)
 .chat-backup/

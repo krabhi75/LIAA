@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Shell } from "@/components/stitch/Shell";
 
 const STUDIO_PROMPT = `You are Liaa, a field voice assistant for Indian farmers, cooperatives, and rural workers.
 
@@ -41,19 +41,8 @@ export default function TelephonyPage() {
   const prompt = STUDIO_PROMPT;
 
   return (
-    <div className="saas-paper min-h-screen px-6 py-6">
-      <header className="mx-auto flex max-w-3xl items-center justify-between">
-        <span className="nova-mark">LIAA</span>
-        <div className="flex gap-3">
-          <Link href="/crm" className="nova-btn">
-            CRM
-          </Link>
-          <Link href="/demo" className="nova-btn nova-btn--primary">
-            Desk
-          </Link>
-        </div>
-      </header>
-      <main className="mx-auto mt-10 max-w-3xl">
+    <Shell title="Settings">
+      <div className="mx-auto max-w-3xl">
         <p className="nova-label">Vobiz × Agora SIP</p>
         <h1 className="mt-2 text-3xl font-semibold">Inbound and outbound phone</h1>
         <p className="mt-3 text-sm text-[var(--ink-3)]">
@@ -173,7 +162,7 @@ export default function TelephonyPage() {
           className="mt-3 h-56 w-full rounded-xl border border-[var(--line)] bg-[var(--sunk)] p-3 text-sm"
           value={prompt}
         />
-      </main>
-    </div>
+      </div>
+    </Shell>
   );
 }

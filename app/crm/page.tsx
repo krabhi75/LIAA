@@ -3,47 +3,19 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Shell } from "@/components/stitch/Shell";
+import { Icon } from "@/components/stitch/Icon";
+import {
+  type AgriCase,
+  type Call,
+  type Contact,
+  initials,
+  isLive,
+  jsonSafe,
+  when,
+} from "@/components/stitch/crm";
 
-type Contact = {
-  id: string;
-  name: string;
-  phone: string;
-  company: string;
-  calls: Call[];
-  updatedAt?: string;
-};
-
-type Call = {
-  id: string;
-  phone: string;
-  direction?: string;
-  status: string;
-  disposition: string;
-  transcript: string;
-  lastSpeech: string;
-  startedAt: string;
-  contact?: { name: string } | null;
-};
-
-type AgriCase = {
-  id: string;
-  farmerName: string;
-  crop: string;
-  village: string;
-  status: string;
-  phone?: string;
-  summary: string;
-};
-
-async function jsonSafe(res: Response): Promise<Record<string, unknown>> {
-  try {
-    return (await res.json()) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
-export default function CrmPage() {
+export default function FarmersPage() {
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
@@ -52,6 +24,8 @@ export default function CrmPage() {
   const [dialing, setDialing] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [q, setQ] = useState("");
+  const [crop, setCrop] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -77,21 +51,26 @@ export default function CrmPage() {
     return () => clearInterval(t);
   }, [load]);
 
-  const inbound = useMemo(
-    () => calls.filter((c) => (c.direction ?? "").includes("in")).length,
-    [calls],
+  const cropOptions = useMemo(
+    () => [...new Set(cases.map((c) => c.crop).filter(Boolean))],
+    [cases],
   );
-  const outbound = useMemo(
-    () => calls.filter((c) => !(c.direction ?? "").includes("in")).length,
-    [calls],
-  );
-  const live = useMemo(
-    () =>
-      calls.filter((c) =>
-        ["queued", "ringing", "dialing", "in-progress"].includes(c.status),
-      ).length,
-    [calls],
-  );
+
+  const rows = useMemo(() => {
+    return contacts.filter((c) => {
+      const hay = `${c.name} ${c.phone}`.toLowerCase();
+      if (q && !hay.includes(q.toLowerCase())) return false;
+      if (crop) {
+        const hit = cases.some(
+          (row) =>
+            row.crop === crop &&
+            (row.phone === c.phone || row.farmerName === c.name),
+        );
+        if (!hit) return false;
+      }
+      return true;
+    });
+  }, [contacts, q, crop, cases]);
 
   async function addAndCall(e: FormEvent) {
     e.preventDefault();
@@ -166,174 +145,199 @@ export default function CrmPage() {
     router.push(`/crm/farmers/${c.id}`);
   }
 
+  const liveCount = calls.filter((c) => isLive(c.status)).length;
+
   return (
-    <div className="saas-paper min-h-screen px-6 py-6">
-      <header className="mx-auto flex max-w-5xl items-center justify-between">
-        <span className="nova-mark">LIAA</span>
-        <div className="flex gap-3">
-          <Link href="/demo" className="nova-btn">
-            Agora desk
-          </Link>
-          <Link href="/telephony" className="nova-btn">
-            SIP
-          </Link>
-          <Link href="/" className="nova-btn">
-            Home
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto mt-10 max-w-5xl">
-        <p className="nova-label">Live field CRM · inbound + outbound</p>
-        <h1 className="mt-2 text-3xl font-semibold">Farmers. Call. Timeline.</h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--ink-3)]">
-          Add a number and start an outbound call. Inbound on +917971443138
-          creates the farmer automatically. Speech lands on their profile
-          timeline.
+    <Shell title="Farmers">
+      <div className="mb-6">
+        <h1 className="ks-display text-3xl font-semibold">Farmers registry</h1>
+        <p className="mt-1 text-sm text-ks-muted">
+          Manage field partners. Inbound on +91 79714 43138 creates a farmer
+          automatically.
         </p>
+      </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-4">
-          {[
-            ["Farmers", contacts.length],
-            ["Inbound", inbound],
-            ["Outbound", outbound],
-            ["Live now", live],
-          ].map(([label, n]) => (
-            <article key={String(label)} className="nova-card">
-              <div className="nova-card__verb">{label}</div>
-              <div className="nova-card__title">{n}</div>
-            </article>
-          ))}
+      <form
+        id="dialer"
+        className="mb-4 rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-sm"
+        onSubmit={(e) => void addAndCall(e)}
+      >
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ks-muted">
+          Add farmer / outbound dialer
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <input
+            className="rounded-lg border border-ks-outline bg-ks-bg px-4 py-2.5 text-sm outline-none focus:border-ks-primary-container"
+            placeholder="Farmer name (optional)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            className="rounded-lg border border-ks-outline bg-ks-bg px-4 py-2.5 text-sm outline-none focus:border-ks-primary-container"
+            placeholder="Mobile +91…"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+          <button
+            className="rounded-lg bg-ks-primary-container px-4 py-2.5 text-sm font-medium text-white hover:bg-ks-primary disabled:opacity-40"
+            type="submit"
+            disabled={Boolean(dialing)}
+          >
+            {dialing ? "Dialing…" : "Save & call"}
+          </button>
+          <button
+            className="rounded-lg border border-ks-primary px-4 py-2.5 text-sm font-medium text-ks-primary hover:bg-ks-low"
+            type="button"
+            disabled={!phone}
+            onClick={(e) => void saveOnly(e)}
+          >
+            Save only
+          </button>
         </div>
+        {error ? <p className="mt-3 text-sm text-ks-error">{error}</p> : null}
+      </form>
 
-        <form className="nova-card mt-8" onSubmit={(e) => void addAndCall(e)}>
-          <div className="nova-card__head">
-            <span className="nova-card__verb">Outbound</span>
-            <span className="nova-card__kind">manual number</span>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-3">
+      <div className="mb-4 rounded-xl border border-ks-outline bg-ks-surface p-4">
+        <div className="flex flex-col gap-3 md:flex-row">
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ks-muted">
+              <Icon name="search" />
+            </span>
             <input
-              className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
-              placeholder="Farmer name (optional)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border border-ks-outline bg-ks-bg py-2.5 pl-10 pr-4 text-sm outline-none focus:border-ks-primary-container"
+              placeholder="Search farmers by name or phone…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
             />
-            <input
-              className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
-              placeholder="Mobile +91…"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-            <button
-              className="nova-btn nova-btn--primary"
-              type="submit"
-              disabled={Boolean(dialing)}
-            >
-              {dialing ? "Dialing…" : "Save & call"}
-            </button>
-            <button
-              className="nova-btn nova-btn--start"
-              type="button"
-              disabled={!phone}
-              onClick={(e) => void saveOnly(e)}
-            >
-              Save only
-            </button>
           </div>
-        </form>
-        {error ? <p className="nova-gate__err mt-4">{error}</p> : null}
+          <select
+            className="rounded-lg border border-ks-outline bg-ks-bg px-3 py-2.5 text-sm"
+            value={crop}
+            onChange={(e) => setCrop(e.target.value)}
+          >
+            <option value="">All crops</option>
+            {cropOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-        <section className="mt-10 grid gap-8 md:grid-cols-2">
-          <div>
-            <h2 className="nova-label-hi">Farmer profiles</h2>
-            {contacts.length === 0 ? (
-              <p className="nova-empty mt-3">
-                No farmers yet. Add a number above or wait for an inbound call.
-              </p>
-            ) : (
-              contacts.map((c) => {
-                const last = c.calls?.[0];
-                return (
-                  <article key={c.id} className="nova-card mt-3">
-                    <div className="nova-card__head">
-                      <span className="nova-card__verb">
-                        {last?.direction ?? "new"}
-                      </span>
-                      <span className="nova-card__kind">{c.phone}</span>
-                    </div>
-                    <div className="nova-card__title">{c.name}</div>
-                    <div className="nova-card__detail">
-                      {last
-                        ? `${last.status} · ${last.disposition}`
-                        : "No calls yet"}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link
-                        href={`/crm/farmers/${c.id}`}
-                        className="nova-btn"
-                      >
-                        Open profile
-                      </Link>
-                      <button
-                        className="nova-btn nova-btn--start"
-                        type="button"
-                        disabled={Boolean(dialing)}
-                        onClick={() => void dialFarmer(c)}
-                      >
-                        Call
-                      </button>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-          <div>
-            <h2 className="nova-label-hi">Live call board</h2>
-            {calls.length === 0 ? (
-              <p className="nova-empty mt-3">Waiting for inbound or outbound.</p>
-            ) : (
-              calls.slice(0, 12).map((call) => (
-                <article key={call.id} className="nova-card mt-3">
-                  <div className="nova-card__head">
-                    <span className="nova-card__verb">
-                      {call.direction ?? "call"}
-                    </span>
-                    <span className="nova-card__kind">{call.status}</span>
-                  </div>
-                  <div className="nova-card__title">
-                    {call.contact?.name ?? call.phone}
-                  </div>
-                  <div className="nova-card__detail">{call.disposition}</div>
-                  {call.transcript ? (
-                    <pre className="nova-card__detail mt-2 whitespace-pre-wrap">
-                      {call.transcript.slice(0, 280)}
-                    </pre>
-                  ) : null}
-                </article>
-              ))
-            )}
-            <h2 className="nova-label-hi mt-8">Open cases</h2>
-            {cases.length === 0 ? (
-              <p className="nova-empty mt-3">Cases appear as the farmer speaks.</p>
-            ) : (
-              cases.slice(0, 8).map((cs) => (
-                <article key={cs.id} className="nova-card mt-3">
-                  <div className="nova-card__head">
-                    <span className="nova-card__verb">{cs.status}</span>
-                    <span className="nova-card__kind">{cs.crop || "crop"}</span>
-                  </div>
-                  <div className="nova-card__title">{cs.farmerName}</div>
-                  <div className="nova-card__detail">
-                    {[cs.phone, cs.village, cs.summary].filter(Boolean).join(" · ")}
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-      </main>
-    </div>
+      <div className="overflow-hidden rounded-xl border border-ks-outline bg-ks-surface shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead className="bg-ks-low text-[12px] font-semibold uppercase tracking-wider text-ks-muted">
+              <tr>
+                <th className="px-4 py-3">Farmer</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Location</th>
+                <th className="px-4 py-3">Primary crop</th>
+                <th className="px-4 py-3">Last call</th>
+                <th className="px-4 py-3 text-center">Cases</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-10 text-ks-muted" colSpan={8}>
+                    No farmers yet. Add a number above or wait for inbound.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((c) => {
+                  const last = c.calls?.[0];
+                  const related = cases.filter(
+                    (row) => row.phone === c.phone || row.farmerName === c.name,
+                  );
+                  const village = related[0]?.village || related[0]?.district || "—";
+                  const cropName = related[0]?.crop || "—";
+                  const live = last ? isLive(last.status) : false;
+                  return (
+                    <tr
+                      key={c.id}
+                      className="h-12 cursor-pointer border-t border-ks-line hover:bg-ks-low"
+                      onClick={() => router.push(`/crm/farmers/${c.id}`)}
+                    >
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-3 font-medium">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ks-container text-xs font-bold text-ks-primary-container">
+                            {initials(c.name)}
+                          </span>
+                          {c.name}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <a
+                          className="inline-flex items-center gap-1 font-medium text-ks-primary hover:underline"
+                          href={`tel:${c.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Icon name="call" className="text-[16px]" />
+                          {c.phone}
+                        </a>
+                      </td>
+                      <td className="px-4 py-2 text-ks-muted">{village}</td>
+                      <td className="px-4 py-2">{cropName}</td>
+                      <td className="px-4 py-2 text-ks-muted">
+                        {last ? when(last.startedAt) : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {related.length ? (
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-ks-secondary/20 text-xs font-semibold">
+                            {related.length}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs ${
+                            live
+                              ? "border-ks-error/30 bg-ks-error-soft text-ks-error"
+                              : "border-ks-mint/50 bg-ks-mint/20 text-ks-primary"
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${live ? "bg-ks-error" : "bg-ks-primary"}`}
+                          />
+                          {live ? "Live" : "Active"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          className="rounded-lg border border-ks-primary px-3 py-1 text-xs font-medium text-ks-primary hover:bg-ks-low"
+                          type="button"
+                          disabled={Boolean(dialing)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void dialFarmer(c);
+                          }}
+                        >
+                          Call
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-ks-line bg-ks-low px-4 py-3 text-sm text-ks-muted">
+          <span>
+            Showing {rows.length} of {contacts.length} farmers · {liveCount} live
+          </span>
+          <Link href="/crm/calls" className="text-ks-primary hover:underline">
+            Open live calls
+          </Link>
+        </div>
+      </div>
+    </Shell>
   );
 }

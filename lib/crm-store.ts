@@ -291,7 +291,9 @@ export async function appendContactNote(
   return row;
 }
 
-export async function listCalls(): Promise<(StoredCall & { contact: { name: string } | null })[]> {
+export async function listCalls(): Promise<
+  (StoredCall & { contact: { name: string; id: string } | null })[]
+> {
   if (prismaOk()) {
     try {
       const rows = await prisma.crmCall.findMany({
@@ -301,7 +303,7 @@ export async function listCalls(): Promise<(StoredCall & { contact: { name: stri
       });
       return rows.map((k) => ({
         ...serializePrismaCall(k),
-        contact: k.contact ? { name: k.contact.name } : null,
+        contact: k.contact ? { name: k.contact.name, id: k.contact.id } : null,
       }));
     } catch {
       /* fall through */
@@ -313,7 +315,7 @@ export async function listCalls(): Promise<(StoredCall & { contact: { name: stri
     .slice(0, 40)
     .map((k) => {
       const c = bag.contacts.find((x) => x.id === k.contactId);
-      return { ...k, contact: c ? { name: c.name } : null };
+      return { ...k, contact: c ? { name: c.name, id: c.id } : null };
     });
 }
 

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./stitch.css";
 
 :root {
   --bg: #f4f6f8;

@@ -20,6 +20,7 @@ const NAV_SECTIONS = [
   {
     label: "Voice",
     items: [
+      { href: "/pitch/investor", icon: "movie", label: "Investor pitch" },
       { href: "/demo", icon: "psychology", label: "Voice desk" },
       { href: "/telephony", icon: "settings", label: "Telephony" },
     ],

@@ -12,7 +12,8 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "pitch:audio": "node scripts/generate-pitch-audio.mjs"
+    "pitch:audio": "node scripts/generate-pitch-audio.mjs",
+    "pitch:video": "node scripts/record-investor-pitch.mjs"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

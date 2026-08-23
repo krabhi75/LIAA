@@ -14,6 +14,8 @@ export function speechFromVobizParams(params: Record<string, string>): string {
     params.stable_speech ||
     params.UnstableSpeech ||
     params.unstable_speech ||
+    params.transcription ||
+    params.Transcription ||
     "";
   if (raw.trim()) return raw.trim();
   const inputType = (params.InputType || params.inputType || "").toLowerCase();

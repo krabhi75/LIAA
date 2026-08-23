@@ -1,9 +1,9 @@
 /**
  * Zero-dependency Vobiz Voice XML helpers.
  * Answer/Gather must never import Prisma or agora-agents — that cold-starts and drops PSTN legs.
- *
- * Proven shape (eb23980): Speak nested INSIDE Gather, en-US TTS, en-IN ASR, Redirect on miss.
  */
+
+import { gatherRetryUrl } from "./phone-session";
 
 export const VOBIZ_PUBLIC_ORIGIN = "https://liaa-ebon.vercel.app";
 
@@ -14,20 +14,20 @@ export const VOBIZ_TTS_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_LANGUAGE?.trim()) ||
   "en-US";
 
-/** Gather ASR — en-IN worked on this Vobiz account; hi-IN has dropped legs. */
+/** Hindi/Hinglish ASR — en-IN + hints; do not use hi-IN on Speak. */
 export const VOBIZ_STT_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_STT_LANGUAGE?.trim()) ||
   "en-IN";
 
 export const VOBIZ_SPEECH_MODEL = "phone_call";
 export const VOBIZ_GATHER_HINTS =
-  "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem";
+  "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem,ramesh,abhishek";
 
 export const KRISHI_ANSWER_GREETING =
   "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam kya hai?";
 
 export const KRISHI_NO_HEAR =
-  "Awaaz clear nahi aayi. Ek baar phir boliye.";
+  "Sunai nahi aayi. Ek baar phir boliye.";
 
 function xmlEscape(text: string): string {
   return text
@@ -62,19 +62,19 @@ export function speakXml(text: string): string {
 }
 
 /**
- * Single Speak inside Gather — do NOT put Speak before Gather (Vobiz drops the leg).
- * No Record until outbound stays connected reliably.
+ * Speak inside Gather. On miss: retry same gather URL — never Redirect to /answer
+ * (that replays the full opening in a loop).
  */
 export function speakGatherXml(prompt: string, actionUrl: string): string {
-  const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
+  const retryUrl = gatherRetryUrl(actionUrl);
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<Response>` +
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${xmlEscape(VOBIZ_STT_LANGUAGE)}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="auto" executionTimeout="15">` +
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${xmlEscape(VOBIZ_STT_LANGUAGE)}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="5" executionTimeout="25" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">` +
     speakXml(prompt) +
     `</Gather>` +
     speakXml(KRISHI_NO_HEAR) +
-    `<Redirect>${xmlEscape(answerUrl)}</Redirect>` +
+    `<Redirect>${xmlEscape(retryUrl)}</Redirect>` +
     `</Response>`
   );
 }

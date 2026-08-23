@@ -1,5 +1,11 @@
 import { after } from "next/server";
 import { handlePhoneSpeechFast } from "@/lib/phone-agent";
+import {
+  freshPhoneConv,
+  gatherActionWithState,
+  phoneConvFromParams,
+  retryPromptForStage,
+} from "@/lib/phone-session";
 import { parseVobizBody, speechFromVobizParams } from "@/lib/vobiz";
 import {
   hangupXml,
@@ -12,17 +18,43 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 10;
 
-/**
- * Gather must return XML in ~1s. All CRM / weather / tools run in after().
- */
+function baseGather(req: Request): string {
+  return `${voiceBase(req)}/api/vobiz/gather`;
+}
+
+function paramsFromRequest(req: Request, body: Record<string, string>): Record<string, string> {
+  const url = new URL(req.url);
+  const merged = { ...body };
+  for (const [k, v] of url.searchParams.entries()) {
+    if (!merged[k]) merged[k] = v;
+  }
+  return merged;
+}
+
+/** Vobiz Redirect after missed Gather hits GET — short retry, same dialog stage. */
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const conv = phoneConvFromParams(Object.fromEntries(url.searchParams.entries()));
+  const gatherBase = baseGather(req);
+  const action = gatherActionWithState(gatherBase, conv);
+  const prompt =
+    url.searchParams.get("retry") === "1"
+      ? retryPromptForStage(conv.stage, conv.name)
+      : retryPromptForStage(conv.stage, conv.name);
+  return xmlResponse(speakGatherXml(prompt, action));
+}
+
 export async function POST(req: Request) {
-  const action = `${voiceBase(req)}/api/vobiz/gather`;
+  const gatherBase = baseGather(req);
   try {
-    const params = await parseVobizBody(req);
+    const body = await parseVobizBody(req);
+    const params = paramsFromRequest(req, body);
     const uuid = params.CallUUID || params.RequestUUID || "phone";
     const speech = speechFromVobizParams(params);
-    const turn = handlePhoneSpeechFast(uuid, speech);
+    const conv = phoneConvFromParams(params);
+    const turn = handlePhoneSpeechFast(conv, speech);
 
+    const action = gatherActionWithState(gatherBase, turn.conv);
     const response = turn.hangup
       ? xmlResponse(hangupXml(turn.speak))
       : xmlResponse(speakGatherXml(turn.speak, action));
@@ -32,6 +64,13 @@ export async function POST(req: Request) {
         try {
           const { persistPhoneTurn } = await import("@/lib/phone-agent");
           await persistPhoneTurn(uuid, speech, turn);
+          if (speech) {
+            console.info("[vobiz/gather]", {
+              uuid,
+              stage: turn.conv.stage,
+              speech: speech.slice(0, 80),
+            });
+          }
         } catch (err) {
           console.error("[vobiz/gather] persist failed", err);
         }
@@ -41,9 +80,10 @@ export async function POST(req: Request) {
     return response;
   } catch (err) {
     console.error("[vobiz/gather]", err);
+    const action = gatherActionWithState(gatherBase, freshPhoneConv());
     return xmlResponse(
       speakGatherXml(
-        "Awaaz clear nahi aayi. Hindi ya Hinglish mein ek baar phir boliye.",
+        "Awaaz clear nahi aayi. Hindi ya Hinglish mein apna naam boliye.",
         action,
       ),
     );

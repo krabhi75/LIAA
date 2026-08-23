@@ -1,6 +1,9 @@
+import type { PhoneConv } from "./phone-session";
+
 export type PhoneTurn = {
   speak: string;
   hangup: boolean;
+  conv: PhoneConv;
   backgroundWeatherPlace?: string;
   capture?: {
     name?: string;
@@ -10,26 +13,6 @@ export type PhoneTurn = {
   };
 };
 
-type Stage = "name" | "place" | "help";
-
-type Conv = {
-  stage: Stage;
-  name: string;
-  place: string;
-  weather: string;
-};
-
-const convos = new Map<string, Conv>();
-
-function conv(channel: string): Conv {
-  let c = convos.get(channel);
-  if (!c) {
-    c = { stage: "name", name: "", place: "", weather: "" };
-    convos.set(channel, c);
-  }
-  return c;
-}
-
 function cleanName(speech: string): string {
   return speech
     .replace(/^(mera naam|main|i am|my name is|naam)\s+/i, "")
@@ -38,23 +21,35 @@ function cleanName(speech: string): string {
 }
 
 /**
- * Sync-only turn. Never await network/DB here — Vobiz drops the call if Gather is slow.
+ * Sync-only turn with explicit conv state (survives Vercel cold starts via URL params).
  */
-export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTurn {
+export function handlePhoneSpeechFast(
+  conv: PhoneConv,
+  speech: string,
+): PhoneTurn {
   const t = speech.trim();
-  const c = conv(channel);
+  const c = { ...conv };
 
   if (!t) {
     if (c.stage === "name") {
-      return { speak: "Sunai nahi diya. Aapka naam boliye.", hangup: false };
+      return {
+        speak: "Sunai nahi diya. Aapka naam boliye.",
+        hangup: false,
+        conv: c,
+      };
     }
     if (c.stage === "place") {
       return {
         speak: "Sunai nahi diya. Aap kis city ya district mein hain?",
         hangup: false,
+        conv: c,
       };
     }
-    return { speak: "Sunai nahi diya. Ek baar phir boliye.", hangup: false };
+    return {
+      speak: "Sunai nahi diya. Ek baar phir boliye.",
+      hangup: false,
+      conv: c,
+    };
   }
 
   if (/\b(bye|goodbye|alvida|band karo|bas itna hi)\b/i.test(t)) {
@@ -63,6 +58,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
         ? `Theek hai ${c.name} ji. Zarurat ho to dubara call kariye.`
         : "Theek hai. Zarurat ho to dubara call kariye.",
       hangup: true,
+      conv: c,
     };
   }
 
@@ -72,6 +68,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
     return {
       speak: `Namaste ${c.name} ji. Aap kis city ya district mein hain?`,
       hangup: false,
+      conv: c,
       capture: { name: c.name },
     };
   }
@@ -82,6 +79,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
     return {
       speak: `Theek hai ${c.name} ji. Location note kar li. Bataiye, kheti mein kis cheez mein madad chahiye?`,
       hangup: false,
+      conv: c,
       capture: { name: c.name, place: t },
       backgroundWeatherPlace: t,
     };
@@ -92,6 +90,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
     return {
       speak: `${c.name} ji, ${c.weather} Aur koi kheti ki problem hai kya?`,
       hangup: false,
+      conv: c,
       capture: { symptoms: t },
     };
   }
@@ -99,6 +98,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
     return {
       speak: `${c.name} ji, abhi live mausam nikal raha hoon. Pehle fasal ki problem bataiye.`,
       hangup: false,
+      conv: c,
       capture: { symptoms: t },
       backgroundWeatherPlace: c.place,
     };
@@ -108,6 +108,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
     return {
       speak: `${c.name} ji, aapki baat expert ko bhej di. Poori kahani dobara nahi batani padegi.`,
       hangup: false,
+      conv: c,
       capture: { symptoms: t, escalate: true },
     };
   }
@@ -115,6 +116,7 @@ export function handlePhoneSpeechFast(channel: string, speech: string): PhoneTur
   return {
     speak: "Samajh gaya. Ye problem kab se hai, aur kitne khet mein hai?",
     hangup: false,
+    conv: c,
     capture: { symptoms: t },
   };
 }
@@ -132,7 +134,7 @@ export async function persistPhoneTurn(
   const { upsertCaseFromCall } = await import("./agri-cases");
   const { fetchLiveWeather } = await import("./weather");
 
-  const c = conv(channel);
+  const c = turn.conv;
   const call = await findCallByUuid(channel);
 
   if (turn.capture?.name) {
@@ -220,21 +222,24 @@ export async function persistPhoneTurn(
   }
 }
 
-/** @deprecated use handlePhoneSpeechFast — kept for any leftover imports */
+/** @deprecated use handlePhoneSpeechFast(conv, speech) */
 export async function handlePhoneSpeech(
   channel: string,
   speech: string,
 ): Promise<PhoneTurn> {
-  return handlePhoneSpeechFast(channel, speech);
+  const { freshPhoneConv } = await import("./phone-session");
+  return handlePhoneSpeechFast(freshPhoneConv(), speech);
 }
 
 export async function persistPlaceWeather(
   channel: string,
   place: string,
 ): Promise<void> {
+  const { freshPhoneConv } = await import("./phone-session");
   await persistPhoneTurn(channel, place, {
     speak: "",
     hangup: false,
+    conv: freshPhoneConv(),
     backgroundWeatherPlace: place,
   });
 }

@@ -14,7 +14,7 @@ import {
   jsonSafe,
   when,
 } from "@/components/stitch/crm";
-import { formatPhoneForDisplay } from "@/lib/demo-crm-seed";
+import { formatPhoneForDisplay } from "@/lib/phone-display";
 import {
   DataTableShell,
   MetricTile,

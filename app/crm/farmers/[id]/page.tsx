@@ -14,7 +14,7 @@ import {
   isCaseOpen,
   type CaseDisposition,
 } from "@/components/stitch/crm-ui";
-import { formatPhoneForDisplay } from "@/lib/demo-crm-seed";
+import { formatPhoneForDisplay } from "@/lib/phone-display";
 
 type TimelineItem = {
   id: string;

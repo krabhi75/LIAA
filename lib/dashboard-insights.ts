@@ -1,5 +1,5 @@
 import type { AgriCase, Call, Contact } from "@/components/stitch/crm";
-import { inferCropFromText } from "@/lib/agri-cases";
+import { inferCropFromText } from "@/lib/crop-infer";
 
 export type InsightBucket = { label: string; n: number; pct: number };
 export type CropBucket = { name: string; count: number; pct: number };

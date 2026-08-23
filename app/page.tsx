@@ -17,6 +17,7 @@ import {
   buildCropBuckets,
   buildIssueBuckets,
 } from "@/lib/dashboard-insights";
+import { lastActivityHint } from "@/lib/phone-display";
 
 async function fetchCrm(path: string) {
   const res = await fetch(`${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`, {
@@ -144,10 +145,7 @@ export default function DashboardPage() {
           label="Last activity"
           value={lastCall ? when(lastCall.startedAt) : "—"}
           hint={
-            lastCall
-              ? lastCall.contact?.name ||
-                (isInbound(lastCall.direction) ? "Inbound call" : "Outbound call")
-              : "No calls yet"
+            lastCall ? lastActivityHint(lastCall, contacts) : "No calls yet"
           }
         />
       </section>

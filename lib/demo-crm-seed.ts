@@ -1,6 +1,10 @@
 import { prisma, prismaConfigured } from "./db";
-import { createAgriCase, inferCropFromText } from "./agri-cases";
+import { createAgriCase } from "./agri-cases";
+import { inferCropFromText } from "./crop-infer";
 import { normalizePhone } from "./vobiz";
+import { formatPhoneForDisplay } from "./phone-display";
+
+export { formatPhoneForDisplay };
 
 const DEMO_TAG = "demo-seed-v1";
 
@@ -39,15 +43,6 @@ export function demoPhone(index: number): string {
 export function formatDemoPhone(index: number): string {
   const tail = demoPhoneSuffix(index);
   return `9999-9999-${tail}`;
-}
-
-/** Show demo seed phones as 9999-9999-XX in the CRM UI. */
-export function formatPhoneForDisplay(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (/^99999999\d{2}$/.test(digits)) {
-    return `9999-9999-${digits.slice(-2)}`;
-  }
-  return phone;
 }
 
 const ISSUE_SNIPPETS = [

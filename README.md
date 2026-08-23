@@ -2,10 +2,8 @@
 
 A voice assistant that **speaks, listens, and acts** — on **Agora Conversational AI**.
 
-Inspired by [vaivikop/nova-agora](https://github.com/vaivikop/nova-agora): same instrument UI (transcript · orb · actions) and assistant tools (calendar, mail, tabs, memory). **Not a sales representative.**
 
 **GitHub:** https://github.com/krabhi75/aetherclose  
-**Reference:** https://github.com/vaivikop/nova-agora
 
 ---
 

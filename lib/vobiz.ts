@@ -1,3 +1,10 @@
+import {
+  KRISHI_NO_HEAR,
+  VOBIZ_GATHER_HINTS,
+  VOBIZ_STT_LANGUAGE,
+  VOBIZ_TTS_VOICE,
+} from "./phone-voice";
+
 function xmlEscape(text: string): string {
   return text
     .replaceAll("&", "&amp;")
@@ -10,24 +17,44 @@ export function vobizXml(inner: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
 }
 
+/** Polly.Aditi for Indian Hindi TTS — never use WOMAN+hi-IN (Vobiz falls back to en-US). */
+export function speakXml(text: string): string {
+  return `<Speak voice="${VOBIZ_TTS_VOICE}">${xmlEscape(text)}</Speak>`;
+}
+
 export function speakGatherXml(prompt: string, actionUrl: string): string {
-  const speak = `<Speak voice="WOMAN" language="hi-IN">${xmlEscape(prompt)}</Speak>`;
+  const speak = speakXml(prompt);
   const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
   return vobizXml(
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="hi-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="20" hints="fasal,gehun,kapas,dhan,keeda,paani,gaon,theek,haan,nahi">${speak}</Gather><Speak voice="WOMAN" language="hi-IN">Sunai nahi diya. Fasal ka naam Hindi ya English mein boliye.</Speak><Redirect>${xmlEscape(answerUrl)}</Redirect>`,
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${VOBIZ_STT_LANGUAGE}" speechModel="telephony" speechEndTimeout="4" executionTimeout="30" profanityFilter="false" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">${speak}</Gather>${speakXml(KRISHI_NO_HEAR)}<Redirect>${xmlEscape(answerUrl)}</Redirect>`,
   );
 }
 
 export function hangupXml(message: string): string {
-  return vobizXml(
-    `<Speak voice="WOMAN" language="hi-IN">${xmlEscape(message)}</Speak><Hangup/>`,
-  );
+  return vobizXml(`${speakXml(message)}<Hangup/>`);
 }
 
 export function xmlResponse(xml: string): Response {
   return new Response(xml, {
     headers: { "Content-Type": "application/xml; charset=utf-8" },
   });
+}
+
+export function speechFromVobizParams(params: Record<string, string>): string {
+  const raw =
+    params.Speech ||
+    params.speech ||
+    params.StableSpeech ||
+    params.stable_speech ||
+    params.UnstableSpeech ||
+    params.unstable_speech ||
+    "";
+  if (raw.trim()) return raw.trim();
+  const inputType = (params.InputType || params.inputType || "").toLowerCase();
+  if (inputType === "dtmf" || params.Digits || params.digits) {
+    return (params.Digits || params.digits || "").trim();
+  }
+  return "";
 }
 
 function envOr(key: string, fallback = ""): string {
@@ -103,7 +130,7 @@ export async function placeVobizCall(opts: {
         answer_method: "POST",
         hangup_url: opts.hangupUrl,
         hangup_method: "POST",
-        caller_name: "Liaa",
+        caller_name: "KrishiSaathi",
         time_limit: 180,
       }),
     },

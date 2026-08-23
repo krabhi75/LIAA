@@ -1,0 +1,31 @@
+---
+description: Vobiz outbound KrishiSaathi phone demo — never regress disconnect, accent, or STT
+alwaysApply: true
+---
+
+# Outbound phone (Vobiz XML / KrishiSaathi)
+
+These invariants protect the 1-hour demo path. Do not revert without explicit user approval.
+
+## Call must stay up on answer
+
+- `/api/vobiz/answer` returns Voice XML **immediately** (no DB/API before the Response).
+- CRM writes run only in `after()` on answer and gather.
+- GET and POST on answer must both return the same Speak+Gather XML.
+- Never `<Hangup/>` after a missed Gather — use `<Redirect>` back to `/api/vobiz/answer`.
+
+## Indian Hindi voice (not US accent)
+
+- Vobiz `Speak` does **not** support `language="hi-IN"` on `WOMAN`/`MAN` — it falls back to **en-US**.
+- Always use **`voice="Polly.Aditi"`** (see `lib/phone-voice.ts` + `speakXml()` in `lib/vobiz.ts`).
+- Static prompts in Devanagari; dynamic replies may stay Romanized but still use Polly.Aditi.
+
+## Farmer speech must be heard
+
+- Gather: `language="hi-IN"`, `speechModel="telephony"`, `executionTimeout="30"`, `speechEndTimeout="4"`.
+- Parse `Speech`, `StableSpeech`, and `UnstableSpeech` from the webhook body.
+- Weather/API work: cap at 2.5s inline; full fetch in `after()` if needed — never block XML for Open-Meteo.
+
+## Flow
+
+Name → city/district → optional weather line → help with crop problem.

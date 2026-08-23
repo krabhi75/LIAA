@@ -1,20 +1,16 @@
 import { after } from "next/server";
 import { voicePublicBase } from "@/lib/agora";
+import { KRISHI_ANSWER_GREETING } from "@/lib/phone-voice";
 import { xmlResponse, parseVobizBody, speakGatherXml } from "@/lib/vobiz";
 import { findCallByUuid, updateCall } from "@/lib/crm-store";
 import { ingestCallWebhook, flattenWebhook } from "@/lib/crm-ingest";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 15;
+export const maxDuration = 10;
 
 function answerXml(req: Request): Response {
   const action = `${voicePublicBase(req)}/api/vobiz/gather`;
-  return xmlResponse(
-    speakGatherXml(
-      "Namaste, main KrishiSaathi hoon. Main aapki kheti se judi problems mein madad kar sakta hoon. Sabse pehle aapka naam kya hai?",
-      action,
-    ),
-  );
+  return xmlResponse(speakGatherXml(KRISHI_ANSWER_GREETING, action));
 }
 
 async function markAnswered(req: Request) {

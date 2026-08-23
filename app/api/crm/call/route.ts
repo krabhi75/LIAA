@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { publicBaseUrl } from "@/lib/agora";
+import { voicePublicBase } from "@/lib/agora";
 import { normalizePhone, placeVobizCall, vobizConfig } from "@/lib/vobiz";
 import { createCall, findContact, updateCall, upsertContactByPhone } from "@/lib/crm-store";
 
@@ -16,8 +16,8 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
-  const base = publicBaseUrl(req);
-  if (!base || base.includes("localhost") || base.includes("127.0.0.1")) {
+  const base = voicePublicBase(req);
+  if (base.includes("localhost") || base.includes("127.0.0.1")) {
     return NextResponse.json(
       {
         error:

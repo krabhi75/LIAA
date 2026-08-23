@@ -121,7 +121,7 @@ export async function ingestCallWebhook(
   });
   const callId = call.id;
 
-  const agri = upsertCaseFromCall({
+  const agri = await upsertCaseFromCall({
     phone: farmerPhone || to || from,
     farmerName,
     direction,

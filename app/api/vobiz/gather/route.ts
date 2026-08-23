@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       transcript,
       disposition: turn.hangup ? "completed" : existing.disposition,
     });
-    upsertCaseFromCall({
+    await upsertCaseFromCall({
       phone: existing.phone,
       farmerName: "Farmer",
       direction: existing.direction,

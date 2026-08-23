@@ -7,7 +7,7 @@ import {
 } from "@/lib/agri-cases";
 
 export async function GET() {
-  return NextResponse.json({ cases: listAgriCases() });
+  return NextResponse.json({ cases: await listAgriCases() });
 }
 
 export async function POST(req: Request) {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const created = createAgriCase({
+  const created = await createAgriCase({
     farmerName: body.farmerName || "Farmer",
     phone: body.phone || "",
     crop: body.crop || "",
@@ -59,13 +59,13 @@ export async function PATCH(req: Request) {
   }
   switch (status) {
     case "escalated": {
-      const row = escalateAgriCase(body.id, body.reason || "Expert desk");
+      const row = await escalateAgriCase(body.id, body.reason || "Expert desk");
       if (!row) return NextResponse.json({ error: "case not found" }, { status: 404 });
       return NextResponse.json({ case: row });
     }
     case "open":
     case "closed": {
-      const row = setAgriCaseStatus(body.id, status);
+      const row = await setAgriCaseStatus(body.id, status);
       if (!row) return NextResponse.json({ error: "case not found" }, { status: 404 });
       return NextResponse.json({ case: row });
     }

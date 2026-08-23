@@ -334,7 +334,7 @@ export async function runTool(
       break;
     }
     case "create_case": {
-      const created = createAgriCase({
+      const created = await createAgriCase({
         farmerName: String(args.farmer_name || "Farmer"),
         phone: String(args.phone || ""),
         crop: s.crop,
@@ -365,7 +365,7 @@ export async function runTool(
     case "escalate_expert": {
       const id = String(args.case_id || s.caseId || "");
       const reason = String(args.reason);
-      if (id) escalateAgriCase(id, reason);
+      if (id) await escalateAgriCase(id, reason);
       s.escalated = true;
       output = {
         waiting: true,

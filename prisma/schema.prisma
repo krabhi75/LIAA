@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -162,6 +163,9 @@ model AgriCase {
   status          String   @default("open")
   escalateReason  String   @default("")
   channel         String   @default("")
+  transcript      String   @default("")
+  direction       String   @default("")
+  source          String   @default("webhook")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

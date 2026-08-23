@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+.agri-cases.json
+.liaa-crm
+dev.db
+*.db

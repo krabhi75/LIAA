@@ -58,7 +58,9 @@ export async function loadFarmerProfile(id: string): Promise<FarmerProfile | nul
   const calls = allCalls.filter(
     (k) => k.contactId === farmer.id || samePhone(k.phone, farmer.phone),
   );
-  const cases = listAgriCases().filter((cs) => samePhone(cs.phone, farmer.phone));
+  const cases = (await listAgriCases()).filter((cs) =>
+    samePhone(cs.phone, farmer.phone),
+  );
   const timeline: TimelineItem[] = [
     ...calls.map((k) => ({
       id: k.id,

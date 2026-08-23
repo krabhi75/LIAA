@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import { prisma, prismaConfigured } from "./db";
 
 export type AgriCaseRow = {
   id: string;
@@ -73,11 +74,61 @@ function blank(partial: Partial<AgriCaseRow>): AgriCaseRow {
   };
 }
 
-export function listAgriCases(): AgriCaseRow[] {
+function serialize(row: {
+  id: string;
+  farmerName: string;
+  phone: string;
+  crop: string;
+  village: string;
+  district: string;
+  symptoms: string;
+  started: string;
+  watering: string;
+  summary: string;
+  status: string;
+  escalateReason: string;
+  channel: string;
+  transcript: string;
+  direction: string;
+  source: string;
+  createdAt: Date;
+}): AgriCaseRow {
+  return {
+    id: row.id,
+    farmerName: row.farmerName,
+    phone: row.phone,
+    crop: row.crop,
+    village: row.village,
+    district: row.district,
+    symptoms: row.symptoms,
+    started: row.started,
+    watering: row.watering,
+    summary: row.summary,
+    status: row.status,
+    escalateReason: row.escalateReason,
+    channel: row.channel,
+    transcript: row.transcript,
+    direction: row.direction,
+    source: row.source,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export async function listAgriCases(): Promise<AgriCaseRow[]> {
+  if (prismaConfigured()) {
+    try {
+      const rows = await prisma.agriCase.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      return rows.map(serialize);
+    } catch (e) {
+      console.error("[agri-cases] list", e);
+    }
+  }
   return [...mem()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function createAgriCase(
+export async function createAgriCase(
   row: Omit<AgriCaseRow, "id" | "createdAt" | "status" | "escalateReason"> & {
     status?: string;
     escalateReason?: string;
@@ -85,13 +136,39 @@ export function createAgriCase(
     direction?: string;
     source?: string;
   },
-): AgriCaseRow {
+): Promise<AgriCaseRow> {
   const created = blank(row);
+  if (prismaConfigured()) {
+    try {
+      const saved = await prisma.agriCase.create({
+        data: {
+          farmerName: created.farmerName,
+          phone: created.phone,
+          crop: created.crop,
+          village: created.village,
+          district: created.district,
+          symptoms: created.symptoms,
+          started: created.started,
+          watering: created.watering,
+          summary: created.summary,
+          status: created.status,
+          escalateReason: created.escalateReason,
+          channel: created.channel,
+          transcript: created.transcript,
+          direction: created.direction,
+          source: created.source,
+        },
+      });
+      return serialize(saved);
+    } catch (e) {
+      console.error("[agri-cases] create", e);
+    }
+  }
   persist([created, ...mem()]);
   return created;
 }
 
-export function upsertCaseFromCall(opts: {
+export async function upsertCaseFromCall(opts: {
   phone: string;
   farmerName?: string;
   direction: string;
@@ -100,13 +177,63 @@ export function upsertCaseFromCall(opts: {
   summary: string;
   transcript?: string;
   status?: string;
-}): AgriCaseRow {
+}): Promise<AgriCaseRow> {
   const phone = opts.phone.replace(/\s/g, "");
+  const crop = guessCrop(`${opts.summary} ${opts.transcript ?? ""}`);
+  if (prismaConfigured()) {
+    try {
+      const existing = await prisma.agriCase.findFirst({
+        where: {
+          OR: [
+            { channel: opts.channel },
+            ...(phone ? [{ phone }] : []),
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (existing) {
+        const saved = await prisma.agriCase.update({
+          where: { id: existing.id },
+          data: {
+            phone: phone || existing.phone,
+            farmerName: opts.farmerName || existing.farmerName,
+            direction: opts.direction || existing.direction,
+            source: opts.source,
+            summary: opts.summary || existing.summary,
+            crop: crop || existing.crop,
+            symptoms: opts.summary || existing.symptoms,
+            transcript: [existing.transcript, opts.transcript]
+              .filter(Boolean)
+              .join("\n"),
+            status: opts.status || existing.status,
+          },
+        });
+        return serialize(saved);
+      }
+        return await createAgriCase({
+          farmerName: opts.farmerName || "Farmer",
+          phone,
+          crop,
+          village: "",
+          district: "",
+          symptoms: opts.summary,
+          started: "",
+          watering: "",
+          summary: opts.summary,
+          channel: opts.channel,
+          transcript: opts.transcript ?? "",
+          direction: opts.direction,
+          source: opts.source,
+          status: opts.status ?? "open",
+        });
+    } catch (e) {
+      console.error("[agri-cases] upsert", e);
+    }
+  }
   const rows = mem();
   const i = rows.findIndex(
     (r) => r.channel === opts.channel || (phone && r.phone === phone),
   );
-  const crop = guessCrop(`${opts.summary} ${opts.transcript ?? ""}`);
   if (i >= 0) {
     const next = {
       ...rows[i],
@@ -124,7 +251,7 @@ export function upsertCaseFromCall(opts: {
     persist(rows);
     return next;
   }
-  return createAgriCase({
+  return await createAgriCase({
     farmerName: opts.farmerName || "Farmer",
     phone,
     crop,
@@ -142,7 +269,21 @@ export function upsertCaseFromCall(opts: {
   });
 }
 
-export function escalateAgriCase(id: string, reason: string): AgriCaseRow | null {
+export async function escalateAgriCase(
+  id: string,
+  reason: string,
+): Promise<AgriCaseRow | null> {
+  if (prismaConfigured()) {
+    try {
+      const saved = await prisma.agriCase.update({
+        where: { id },
+        data: { status: "escalated", escalateReason: reason },
+      });
+      return serialize(saved);
+    } catch (e) {
+      console.error("[agri-cases] escalate", e);
+    }
+  }
   const rows = mem();
   const i = rows.findIndex((r) => r.id === id);
   if (i < 0) return null;
@@ -151,7 +292,21 @@ export function escalateAgriCase(id: string, reason: string): AgriCaseRow | null
   return rows[i];
 }
 
-export function setAgriCaseStatus(id: string, status: string): AgriCaseRow | null {
+export async function setAgriCaseStatus(
+  id: string,
+  status: string,
+): Promise<AgriCaseRow | null> {
+  if (prismaConfigured()) {
+    try {
+      const saved = await prisma.agriCase.update({
+        where: { id },
+        data: { status },
+      });
+      return serialize(saved);
+    } catch (e) {
+      console.error("[agri-cases] status", e);
+    }
+  }
   const rows = mem();
   const i = rows.findIndex((r) => r.id === id);
   if (i < 0) return null;

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { prisma } from "./db";
+import { prisma, prismaConfigured } from "./db";
 import { normalizePhone } from "./vobiz";
 
 export type StoredContact = {
@@ -34,12 +34,11 @@ type Bag = { contacts: StoredContact[]; calls: StoredCall[] };
 type G = typeof globalThis & { __liaaCrm?: Bag };
 
 function prismaOk(): boolean {
-  const url = process.env.DATABASE_URL ?? "";
-  if (!url) return false;
-  if (process.env.VERCEL && (url.startsWith("file:") || url.includes("dev.db"))) {
-    return false;
-  }
-  return true;
+  return prismaConfigured();
+}
+
+function logPrisma(op: string, e: unknown) {
+  console.error(`[crm-store] ${op}`, e);
 }
 
 function dir(): string {
@@ -111,8 +110,8 @@ export async function listContacts(): Promise<
         updatedAt: c.updatedAt.toISOString(),
         calls: c.calls.map(serializePrismaCall),
       }));
-    } catch {
-      /* SQLite missing on Vercel */
+    } catch (e) {
+      logPrisma("listContacts", e);
     }
   }
   const bag = mem();
@@ -147,8 +146,8 @@ export async function createContact(input: {
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString(),
       };
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const row: StoredContact = {
@@ -192,8 +191,8 @@ export async function upsertContactByPhone(input: {
         };
       }
       return createContact({ name: input.name || "Farmer", phone });
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const bag = mem();
@@ -222,8 +221,8 @@ export async function findContact(id: string): Promise<StoredContact | null> {
           updatedAt: c.updatedAt.toISOString(),
         };
       }
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   return mem().contacts.find((c) => c.id === id) ?? null;
@@ -246,8 +245,8 @@ export async function findContactByPhone(phoneRaw: string): Promise<StoredContac
           updatedAt: c.updatedAt.toISOString(),
         };
       }
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   return mem().contacts.find((c) => c.phone === phone) ?? null;
@@ -278,8 +277,8 @@ export async function appendContactNote(
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString(),
       };
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const bag = mem();
@@ -305,8 +304,8 @@ export async function listCalls(): Promise<
         ...serializePrismaCall(k),
         contact: k.contact ? { name: k.contact.name, id: k.contact.id } : null,
       }));
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const bag = mem();
@@ -342,8 +341,8 @@ export async function createCall(input: {
         },
       });
       return serializePrismaCall(k);
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const row: StoredCall = {
@@ -372,8 +371,8 @@ export async function findCallByUuid(uuid: string): Promise<StoredCall | null> {
     try {
       const k = await prisma.crmCall.findFirst({ where: { vobizUuid: uuid } });
       if (k) return serializePrismaCall(k);
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   return mem().calls.find((k) => k.vobizUuid === uuid) ?? null;
@@ -402,8 +401,8 @@ export async function updateCall(
         },
       });
       return serializePrismaCall(k);
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const bag = mem();
@@ -461,8 +460,8 @@ export async function upsertCallByUuid(input: {
         transcript: input.transcript,
         contactId: input.contactId,
       });
-    } catch {
-      /* fall through */
+    } catch (e) {
+      logPrisma("prisma", e);
     }
   }
   const bag = mem();

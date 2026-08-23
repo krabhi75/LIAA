@@ -318,7 +318,7 @@ function EscalationFunnel({
       </div>
       <p className="mt-4 text-center text-xs text-ks-muted">
         Closed / resolved (exit):{" "}
-        <span className="font-semibold text-ks-primary">{closed}</span>
+        <span className="font-semibold text-[#2e844a]">{closed}</span>
       </p>
     </div>
   );

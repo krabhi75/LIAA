@@ -20,6 +20,9 @@ Greeting: Namaste. Main Liaa, kheti sahayak. Fasal mein kya ho raha hai?`;
 export default function TelephonyPage() {
   const [cfg, setCfg] = useState<{
     number: string;
+    sipDomain: string;
+    outboundTrunkId: string;
+    inboundTrunkId: string;
     hangupUrl: string | null;
     agoraSbc: string;
   } | null>(null);
@@ -64,7 +67,15 @@ export default function TelephonyPage() {
         <article className="nova-card mt-6">
           <div className="nova-card__verb">Your DID</div>
           <div className="nova-card__title">{cfg?.number ?? "+917971443138"}</div>
-          <div className="nova-card__detail">Gujarat · unlink Voice App “test” after inbound trunk is linked</div>
+          <div className="nova-card__detail">
+            SIP Domain (paste in Agora): {cfg?.sipDomain ?? "a4dc1a99.sip.vobiz.ai"}
+          </div>
+          <div className="nova-card__detail">
+            Outbound trunk {cfg?.outboundTrunkId ?? "a4dc1a99-2efa-4f52-b481-5dfd99aca03d"}
+          </div>
+          <div className="nova-card__detail">
+            Inbound trunk {cfg?.inboundTrunkId ?? "c56b68cd-591f-4196-92df-e9e7a34aae9b"}
+          </div>
         </article>
 
         <ol className="mt-8 list-decimal space-y-4 pl-5 text-sm leading-relaxed text-[var(--ink-2)]">
@@ -80,7 +91,9 @@ export default function TelephonyPage() {
           </li>
           <li>
             Agora → Add Phone Number → Vendor SIP Trunk → number{" "}
-            <strong>+917971443138</strong>, UDP, that domain, credential user/pass.
+            <strong>+917971443138</strong>, address{" "}
+            <strong>{cfg?.sipDomain ?? "a4dc1a99.sip.vobiz.ai"}</strong>, UDP,
+            SIP credential username/password (not the trunk UUID).
           </li>
           <li>
             Agora → Campaigns → one contact = your mobile. That is outbound.

@@ -2,7 +2,17 @@
 
 Official guide: https://www.vobiz.ai/docs/integrations/agora
 
-**Number:** `+917971443138` (Gujarat). This is SIP, not the old XML Speak/Gather IVR.
+**Live trunks**
+
+| Role | ID / domain |
+|------|-------------|
+| SIP domain (Agora SIP Trunk Address) | `a4dc1a99.sip.vobiz.ai` |
+| Outbound trunk | `a4dc1a99-2efa-4f52-b481-5dfd99aca03d` |
+| Inbound trunk | `c56b68cd-591f-4196-92df-e9e7a34aae9b` |
+| SIP trunk ref | `5c206cbc-9733-48c5-a1d0-b7b50ecbe5e8` |
+
+Agora → Add Phone Number → SIP Trunk Address = **`a4dc1a99.sip.vobiz.ai`**, UDP, plus the SIP **credential** username/password (not the trunk UUID).
+
 
 Unlink the XML voice app **test** from this number after the inbound trunk is linked, or inbound may never reach Agora.
 

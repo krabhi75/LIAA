@@ -33,7 +33,12 @@ export function vobizConfig() {
   const authId = process.env.VOBIZ_AUTH_ID ?? "";
   const token = process.env.VOBIZ_AUTH_TOKEN ?? "";
   const from = process.env.VOBIZ_FROM_NUMBER ?? "+917971443138";
-  return { authId, token, from };
+  const sipDomain = process.env.VOBIZ_SIP_DOMAIN ?? "a4dc1a99.sip.vobiz.ai";
+  const outboundTrunkId =
+    process.env.VOBIZ_OUTBOUND_TRUNK_ID ?? "a4dc1a99-2efa-4f52-b481-5dfd99aca03d";
+  const inboundTrunkId =
+    process.env.VOBIZ_INBOUND_TRUNK_ID ?? "c56b68cd-591f-4196-92df-e9e7a34aae9b";
+  return { authId, token, from, sipDomain, outboundTrunkId, inboundTrunkId };
 }
 
 export function normalizePhone(raw: string): string {

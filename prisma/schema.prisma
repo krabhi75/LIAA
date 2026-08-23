@@ -148,6 +148,9 @@ model CrmCall {
   hangupCause   String      @default("")
   transcript    String      @default("")
   lastSpeech    String      @default("")
+  recordingUrl  String      @default("")
+  recordingId   String      @default("")
+  recordingSecs Int         @default(0)
   startedAt     DateTime    @default(now())
   answeredAt    DateTime?
   endedAt       DateTime?

@@ -15,6 +15,8 @@ type TimelineItem = {
   detail: string;
   transcript?: string;
   status?: string;
+  recordingUrl?: string;
+  recordingSecs?: number;
 };
 
 type Farmer = {
@@ -95,6 +97,7 @@ export default function FarmerProfilePage() {
 
   useEffect(() => {
     void load();
+    void fetch("/api/vobiz/warm").catch(() => undefined);
     const t = setInterval(() => void load(), 4000);
     return () => clearInterval(t);
   }, [load]);
@@ -346,6 +349,24 @@ export default function FarmerProfilePage() {
                           </div>
                           <p className="text-sm font-medium">{item.title}</p>
                           <p className="text-sm text-ks-muted">{item.detail}</p>
+                          {item.recordingUrl ? (
+                            <div className="mt-2 rounded-lg border border-ks-outline bg-ks-surface p-2">
+                              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ks-muted">
+                                Call recording
+                                {item.recordingSecs
+                                  ? ` · ${item.recordingSecs}s`
+                                  : ""}
+                              </p>
+                              <audio
+                                className="w-full"
+                                controls
+                                preload="metadata"
+                                src={item.recordingUrl}
+                              >
+                                <a href={item.recordingUrl}>Download recording</a>
+                              </audio>
+                            </div>
+                          ) : null}
                           {item.transcript ? (
                             <pre className="mt-2 whitespace-pre-wrap text-xs text-ks-on-surface">
                               {item.transcript}

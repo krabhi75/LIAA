@@ -59,9 +59,14 @@ export function speakXml(text: string): string {
 
 export function speakGatherXml(prompt: string, actionUrl: string): string {
   const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
+  const recordCb = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/recording");
+  const record =
+    `<Record fileFormat="mp3" recordSession="true" maxLength="3600" playBeep="false" redirect="false" ` +
+    `callbackUrl="${xmlEscape(recordCb)}" callbackMethod="POST"/>`;
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<Response>` +
+    record +
     `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${VOBIZ_STT_LANGUAGE}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="auto" executionTimeout="25" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">` +
     speakXml(prompt) +
     `</Gather>` +

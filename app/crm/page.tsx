@@ -47,6 +47,7 @@ export default function FarmersPage() {
 
   useEffect(() => {
     void load();
+    void fetch("/api/vobiz/warm").catch(() => undefined);
     const t = setInterval(() => void load(), 3000);
     return () => clearInterval(t);
   }, [load]);

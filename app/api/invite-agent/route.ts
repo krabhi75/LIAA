@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         ttsVoiceId:
           process.env.ELEVENLABS_VOICE_ID ||
           process.env.LIAA_TTS_VOICE ||
-          "21m00Tcm4TlvDq8ikWAM",
+          "pNInz6obpgDQGcFmaJgB",
         idleTimeout: 180,
       };
     }
@@ -174,11 +174,13 @@ export async function POST(req: NextRequest) {
           voiceId:
             config.ttsVoiceId ||
             process.env.ELEVENLABS_VOICE_ID ||
-            "21m00Tcm4TlvDq8ikWAM",
+            "pNInz6obpgDQGcFmaJgB",
           baseUrl:
             process.env.ELEVENLABS_BASE_URL ||
             "wss://api.elevenlabs.io/v1",
           optimizeStreamingLatency: 3,
+          stability: 0.45,
+          similarityBoost: 0.75,
         } as ConstructorParameters<typeof ElevenLabsTTS>[0]),
       )
       .withTools(mcpAttached);

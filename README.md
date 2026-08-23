@@ -99,6 +99,7 @@ Never commit `.env.local`.
 
 | Doc | Purpose |
 |-----|---------|
+| [docs/AGORA_CONSOLE.md](docs/AGORA_CONSOLE.md) | Agora agent prompt, models, VAD, MCP paste guide |
 | [docs/SUBMISSION.md](docs/SUBMISSION.md) | Commudle 15-item checklist |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design |
 | [docs/DEMO.md](docs/DEMO.md) | Video shot list |

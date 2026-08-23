@@ -17,6 +17,8 @@ export type TimelineItem = {
   detail: string;
   transcript?: string;
   status?: string;
+  recordingUrl?: string;
+  recordingSecs?: number;
 };
 
 export type FarmerProfile = {
@@ -75,6 +77,8 @@ export async function loadFarmerProfile(id: string): Promise<FarmerProfile | nul
       detail: [k.status, k.disposition, k.hangupCause].filter(Boolean).join(" · "),
       transcript: [k.transcript, k.lastSpeech].filter(Boolean).join("\n"),
       status: k.status,
+      recordingUrl: k.recordingUrl || undefined,
+      recordingSecs: k.recordingSecs || undefined,
     })),
     ...cases.map((cs) => ({
       id: cs.id,

@@ -31,6 +31,9 @@ export type StoredCall = {
   hangupCause: string;
   transcript: string;
   lastSpeech: string;
+  recordingUrl: string;
+  recordingId: string;
+  recordingSecs: number;
   startedAt: string;
   answeredAt: string | null;
   endedAt: string | null;
@@ -496,6 +499,9 @@ export async function createCall(input: {
     hangupCause: "",
     transcript: input.transcript ?? "",
     lastSpeech: "",
+    recordingUrl: "",
+    recordingId: "",
+    recordingSecs: 0,
     startedAt: nowIso(),
     answeredAt: null,
     endedAt: null,
@@ -536,6 +542,9 @@ export async function updateCall(
           hangupCause: data.hangupCause,
           transcript: data.transcript,
           lastSpeech: data.lastSpeech,
+          recordingUrl: data.recordingUrl,
+          recordingId: data.recordingId,
+          recordingSecs: data.recordingSecs,
           answeredAt: data.answeredAt ? new Date(data.answeredAt) : undefined,
           endedAt: data.endedAt ? new Date(data.endedAt) : undefined,
         },
@@ -648,6 +657,9 @@ function serializePrismaCall(k: {
   hangupCause: string;
   transcript: string;
   lastSpeech: string;
+  recordingUrl?: string;
+  recordingId?: string;
+  recordingSecs?: number;
   startedAt: Date;
   answeredAt: Date | null;
   endedAt: Date | null;
@@ -663,6 +675,9 @@ function serializePrismaCall(k: {
     hangupCause: k.hangupCause,
     transcript: k.transcript,
     lastSpeech: k.lastSpeech,
+    recordingUrl: k.recordingUrl ?? "",
+    recordingId: k.recordingId ?? "",
+    recordingSecs: k.recordingSecs ?? 0,
     startedAt: k.startedAt.toISOString(),
     answeredAt: k.answeredAt?.toISOString() ?? null,
     endedAt: k.endedAt?.toISOString() ?? null,

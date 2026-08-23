@@ -33,7 +33,7 @@ Agora Campaign CSV → Agora Conversational AI agent → SIP → Vobiz trunk →
 ```
 
 | What updates | **https://liaa-ebon.vercel.app** dashboard + `/crm/calls` + farmer profile timeline |
-| Voice engine | **Vobiz XML** — WOMAN TTS (en-US) + Gather ASR (`en-IN`, `dtmf speech`, finish `#`) |
+| Voice engine | **Vobiz XML** — **Polly.Aditi** (Indian Hindi/Hinglish TTS) + Gather ASR (`en-IN`, `dtmf speech`, finish `#`) |
 | Language | Roman Hindi prompts; name → location → help; weather after XML via `persistPhoneTurn` |
 | When to use | Live farmer CRM write, weather on profile, expert case — **not** the primary “AI listens” demo |
 

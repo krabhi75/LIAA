@@ -7,14 +7,21 @@ import { gatherRetryUrl } from "./phone-session";
 
 export const VOBIZ_PUBLIC_ORIGIN = "https://liaa-ebon.vercel.app";
 
+/**
+ * Indian farmer voice: Polly.Aditi (bilingual hi-IN / en-IN).
+ * Do NOT use WOMAN+en-US (US accent). Do NOT use WOMAN+en-IN (invalid Speak lang → drop).
+ * Override with VOBIZ_TTS_VOICE only if the account lacks Polly.
+ */
 export const VOBIZ_TTS_VOICE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_VOICE?.trim()) ||
-  "WOMAN";
+  "Polly.Aditi";
+
+/** Only for non-Polly WOMAN/MAN fallback — must be a documented Speak language. */
 export const VOBIZ_TTS_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_LANGUAGE?.trim()) ||
   "en-US";
 
-/** Hindi/Hinglish ASR — en-IN + hints; do not use hi-IN on Speak. */
+/** Gather ASR — Indian English / Hinglish. */
 export const VOBIZ_STT_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_STT_LANGUAGE?.trim()) ||
   "en-IN";
@@ -23,8 +30,9 @@ export const VOBIZ_SPEECH_MODEL = "phone_call";
 export const VOBIZ_GATHER_HINTS =
   "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem,ramesh,abhishek";
 
+/** Roman Hindi — Aditi reads Hinglish naturally. */
 export const KRISHI_ANSWER_GREETING =
-  "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam boliye, aur bolne ke baad hash button dabaiye.";
+  "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam boliye. Bolne ke baad phone par hash dabaiye.";
 
 export const KRISHI_NO_HEAR =
   "Awaaz clear nahi aayi. Naam boliye, phir hash dabaiye.";
@@ -53,17 +61,18 @@ export function voiceBase(req?: Request): string {
 
 export function speakXml(text: string): string {
   const voice = VOBIZ_TTS_VOICE;
+  // Polly.* voices (Aditi) are bilingual Indian — no language attr.
   if (voice.startsWith("Polly.")) {
     return `<Speak voice="${xmlEscape(voice)}">${xmlEscape(text)}</Speak>`;
   }
+  // Non-Polly fallback only: never emit en-IN/hi-IN on WOMAN/MAN Speak.
   let lang = VOBIZ_TTS_LANGUAGE;
   if (lang === "en-IN" || lang === "hi-IN") lang = "en-US";
   return `<Speak voice="${xmlEscape(voice)}" language="${xmlEscape(lang)}">${xmlEscape(text)}</Speak>`;
 }
 
 /**
- * dtmf speech + finishOnKey=# helps Vobiz finalize Hindi utterances on PSTN.
- * Omit speechModel to use provider default when phone_call returns empty Speech.
+ * Speak nested inside Gather. dtmf speech + # helps finalize PSTN utterances.
  */
 export function speakGatherXml(prompt: string, actionUrl: string): string {
   const retryUrl = gatherRetryUrl(actionUrl);

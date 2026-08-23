@@ -165,6 +165,48 @@ export async function createContact(input: {
   return row;
 }
 
+export async function upsertContactByPhone(input: {
+  name: string;
+  phone: string;
+}): Promise<StoredContact | null> {
+  const phone = normalizePhone(input.phone);
+  if (!phone) return null;
+  if (prismaOk()) {
+    try {
+      const existing = await prisma.crmContact.findFirst({ where: { phone } });
+      if (existing) {
+        const name =
+          input.name && input.name !== "Farmer" ? input.name : existing.name;
+        const c = await prisma.crmContact.update({
+          where: { id: existing.id },
+          data: { name },
+        });
+        return {
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          company: c.company,
+          notes: c.notes,
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
+        };
+      }
+      return createContact({ name: input.name || "Farmer", phone });
+    } catch {
+      /* fall through */
+    }
+  }
+  const bag = mem();
+  const existing = bag.contacts.find((c) => c.phone === phone);
+  if (existing) {
+    if (input.name && input.name !== "Farmer") existing.name = input.name;
+    existing.updatedAt = nowIso();
+    persist(bag);
+    return existing;
+  }
+  return createContact({ name: input.name || "Farmer", phone });
+}
+
 export async function findContact(id: string): Promise<StoredContact | null> {
   if (prismaOk()) {
     try {
@@ -318,6 +360,7 @@ export async function upsertCallByUuid(input: {
   hangupCause: string;
   transcript: string;
   ended: boolean;
+  contactId?: string | null;
 }): Promise<StoredCall> {
   if (prismaOk()) {
     try {
@@ -334,6 +377,7 @@ export async function upsertCallByUuid(input: {
             vobizUuid: input.uuid,
             phone: input.phone || existing.phone,
             direction: input.direction || existing.direction,
+            contactId: input.contactId ?? existing.contactId,
             status: input.status,
             disposition: input.disposition,
             hangupCause: input.hangupCause,
@@ -351,6 +395,7 @@ export async function upsertCallByUuid(input: {
         disposition: input.disposition,
         vobizUuid: input.uuid,
         transcript: input.transcript,
+        contactId: input.contactId,
       });
     } catch {
       /* fall through */
@@ -366,7 +411,7 @@ export async function upsertCallByUuid(input: {
       ...prev,
       vobizUuid: input.uuid,
       phone: input.phone || prev.phone,
-      direction: input.direction || prev.direction,
+      contactId: input.contactId ?? prev.contactId,
       status: input.status,
       disposition: input.disposition,
       hangupCause: input.hangupCause,
@@ -385,6 +430,7 @@ export async function upsertCallByUuid(input: {
     disposition: input.ended ? input.disposition : "dialing",
     vobizUuid: input.uuid,
     transcript: input.transcript,
+    contactId: input.contactId,
   });
 }
 

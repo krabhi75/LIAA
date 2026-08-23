@@ -1,5 +1,5 @@
 import { upsertCaseFromCall } from "./agri-cases";
-import { upsertCallByUuid } from "./crm-store";
+import { upsertCallByUuid, upsertContactByPhone } from "./crm-store";
 import { mapDisposition, normalizePhone } from "./vobiz";
 
 function pick(map: Record<string, string>, keys: string[]): string {
@@ -102,6 +102,12 @@ export async function ingestCallWebhook(
     transcript.slice(0, 280) ||
     `${direction} ${source} ${ended ? "ended" : statusRaw || event || "update"}`;
 
+  const farmerName = pick(raw, ["CallerName", "caller_name", "name"]) || "Farmer";
+  const lead = await upsertContactByPhone({
+    name: farmerName,
+    phone: farmerPhone || to || from,
+  });
+
   const call = await upsertCallByUuid({
     uuid,
     phone: farmerPhone || to || from || "unknown",
@@ -111,12 +117,13 @@ export async function ingestCallWebhook(
     hangupCause: hangup,
     transcript,
     ended,
+    contactId: lead?.id ?? null,
   });
   const callId = call.id;
 
   const agri = upsertCaseFromCall({
     phone: farmerPhone || to || from,
-    farmerName: pick(raw, ["CallerName", "caller_name", "name"]) || "Farmer",
+    farmerName,
     direction,
     source,
     channel: uuid,

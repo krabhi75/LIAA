@@ -1,99 +1,94 @@
-# Liaa
+# KrishiSaathi (LIAA)
 
-A voice assistant that **speaks, listens, and acts** — on **Agora Conversational AI**.
+Hindi voice agricultural assistant — **speaks, listens, captures, and acts** — on **Agora Conversational AI**, with PSTN field ops via Vobiz.
 
-
-**GitHub:** https://github.com/krabhi75/aetherclose  
+**GitHub:** https://github.com/krabhi75/LIAA  
+**Live:** https://liaa-ebon.vercel.app  
 
 ---
 
-## What Liaa does
+## What it does
 
-| You say | What happens |
-|---|---|
-| "What does my day look like?" | `get_calendar` → action card |
-| "Book a sync with Rahul tomorrow at four" | `create_event` (DEMO DATA until Google is wired) |
-| "Move it an hour later" | `update_event` using the remembered event id |
-| "What's in my inbox?" | `read_email` |
-| "Open YouTube" | `open_tab` (trusted hosts auto-open; others ask) |
-| "Remember my name is Abhishek" | `remember` → durable `.nova-memory.json` |
+| Surface | User | Capability |
+|---------|------|------------|
+| **`/demo`** | Operator with mic | Agora Conversational AI desk — Hindi/Hinglish, barge-in, MCP tools |
+| **`/crm`** | Field team | Farmer CRM, outbound dial, call timeline, weather on profile |
+| **Agora Campaign** | Campaign outbound | Agora CAI → Vobiz SIP → farmer phone (see telephony setup) |
+| **Inbound DID** | Farmer calls +917971443138 | Vobiz → Agora SIP → Liaa agent |
 
-Seeded calendar/mail results carry a visible **DEMO DATA** badge — Liaa will not pretend a Meet link is real Google.
+KrishiSaathi phone flow (CRM dial): name → district → live weather → crop help → expert case.
 
-## Live desk
+---
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ LIAA · agent · tools                    Start / Stop        │
-├──────────────┬──────────────────────────┬───────────────────┤
-│ Transcript   │         ORB              │ Actions           │
-│ YOU / LIAA   │   listening / speaking   │ calendar · mail   │
-│              │ AGORA · channel · rtt    │ linked progress   │
-└──────────────┴──────────────────────────┴───────────────────┘
-```
+## Important: two outbound paths
 
-Open **http://localhost:3000/demo** — no sign-in. Auto-wakes when mic is already allowed (`?manual` forces the button).
+**CRM “Call” does not update Agora Campaign stats.** Agora Campaigns only count CSV/campaign-initiated dials. CRM uses Vobiz XML + Polly.Aditi Hindi bot.
 
-## Setup
+Full explanation: **[docs/OUTBOUND_PATHS.md](docs/OUTBOUND_PATHS.md)**
+
+---
+
+## Quick start
 
 ```bash
-cd "C:\Users\krabh\Downloads\Ecosphere Hackathons\aetherclose"
+git clone https://github.com/krabhi75/LIAA.git
+cd LIAA
 npm install
+cp .env.example .env.local   # fill Agora + Vobiz + DATABASE_URL
 npm run db:push
-npm run db:seed
 npm run dev
 ```
 
-`.env.local`:
+Open http://localhost:3000/demo (Agora desk) or http://localhost:3000/crm (farmers).
 
-```bash
-NEXT_PUBLIC_AGORA_APP_ID=...
-NEXT_AGORA_APP_CERTIFICATE=...
-AGORA_AREA=US
-PUBLIC_BASE_URL=https://your-cloudflare-tunnel
-AETHER_MCP_KEY=...
-DATABASE_URL="file:./dev.db"
-AUTH_SECRET=any-long-string
-```
+Production uses **Neon Postgres** (`DATABASE_URL` + `DIRECT_URL` on Vercel).
 
-Tunnel so Agora can reach MCP tools:
-
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
+---
 
 ## Architecture
 
-Full write-up: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (diagrams, UIDs, tools, env, sequences, tradeoffs).
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Agora RTC desk, MCP tools, UIDs, env  
+- **[docs/VOBIZ_AGORA.md](docs/VOBIZ_AGORA.md)** — SIP trunks, inbound SBC, campaign setup  
+- **[docs/SUBMISSION.md](docs/SUBMISSION.md)** — Hackathon Commudle checklist (15 items)  
+- **[docs/DEMO.md](docs/DEMO.md)** — Video shot list  
 
 ```text
-mic → Agora RTC → Conversational AI (ASR → LLM → TTS)
-                      │  MCP tools
-                      ▼
-              /api/mcp  → calendar / mail / tab / memory
-                      │
-         public desk ◄── polls session + action cards
+Browser /demo → Agora RTC → Conversational AI (Deepgram · GPT-4o-mini · MiniMax)
+                                    ↓ MCP
+                              /api/mcp → tools + CRM
+
+CRM Call → Vobiz REST → /api/vobiz/answer (XML KrishiSaathi, Polly.Aditi hi-IN STT)
+                              ↓
+                         Neon CRM + Open-Meteo weather
 ```
 
-Voice stays on Agora managed models (Deepgram · GPT-4o-mini · MiniMax).  
-Unlike upstream nova-agora, this build does **not** use a custom Groq OpenAI-compat callback — that keeps Conversational AI as the voice engine.
+---
 
-Demo shot list: [docs/DEMO.md](docs/DEMO.md) · Submission paste: [docs/SUBMISSION.md](docs/SUBMISSION.md)  
-Account / chat handoff: [docs/CHAT_HANDOFF.md](docs/CHAT_HANDOFF.md)
+## Env (`.env.local`)
 
-## vs nova-agora
+```bash
+NEXT_PUBLIC_AGORA_APP_ID=
+NEXT_AGORA_APP_CERTIFICATE=
+AGORA_AREA=US
+PUBLIC_BASE_URL=https://liaa-ebon.vercel.app
+AETHER_MCP_KEY=
+DATABASE_URL=          # Neon pooled URL on Vercel
+DIRECT_URL=            # Neon direct URL for migrations
+VOBIZ_AUTH_ID=
+VOBIZ_AUTH_TOKEN=
+VOBIZ_FROM_NUMBER=+917971443138
+```
 
-| Feature | Status |
-|---|---|
-| Instrument UI + orb + RTT | Yes |
-| Assistant persona (not sales) | Yes |
-| Calendar / mail / remember / open_tab tools | Yes (demo store + honest badges) |
-| Live Google OAuth | Not wired yet — use DEMO DATA path |
-| Desktop `open_app` | Not ported |
-| Groq custom LLM endpoint | Intentionally not used |
+Never commit `.env.local`.
 
-## Known limits
+---
 
-- MCP needs public HTTPS `PUBLIC_BASE_URL`
-- Calendar/mail writes are in-process demo data unless you add Google
-- Quick Cloudflare tunnels expire on restart
+## Hackathon submission
+
+All 15 Commudle assets are mapped in **[docs/SUBMISSION.md](docs/SUBMISSION.md)**.
+
+---
+
+## License
+
+MIT — see repository for hackathon/EchoSphere context.

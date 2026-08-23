@@ -5,7 +5,7 @@ alwaysApply: true
 
 # GitHub push after major changes
 
-This repo is https://github.com/krabhi75/aetherclose (branch `main`).
+This repo is https://github.com/krabhi75/LIAA (branch `main`). Push to origin only — that remote is LIAA, not aetherclose.
 
 After a **major** change set (new feature, UI overhaul, Agora/MCP fix, demo-readiness work):
 

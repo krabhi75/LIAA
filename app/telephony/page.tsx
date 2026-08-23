@@ -72,6 +72,17 @@ export default function TelephonyPage() {
           </div>
         </article>
 
+        <article className="nova-card mt-4 border-amber-500/30 bg-amber-500/5">
+          <div className="nova-card__verb">Agora Campaign vs CRM dial</div>
+          <p className="nova-card__detail mt-2">
+            <strong>Agora → Campaigns</strong> (CSV outbound) updates the Agora
+            campaign dashboard and uses Conversational AI over SIP. The{" "}
+            <strong>/crm Call button</strong> uses Vobiz XML KrishiSaathi and
+            only updates the LIAA CRM — not Agora campaign counts. See{" "}
+            <code className="text-xs">docs/OUTBOUND_PATHS.md</code>.
+          </p>
+        </article>
+
         <article className="nova-card mt-4">
           <div className="nova-card__head">
             <span className="nova-card__verb">Inbound webhook</span>

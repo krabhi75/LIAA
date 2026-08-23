@@ -1,9 +1,10 @@
-# Liaa — Architecture & System Details
+# KrishiSaathi (LIAA) — Architecture & System Details
 
-**Product:** Liaa — personal voice assistant (calendar, mail, tabs, memory)  
-**Repo:** https://github.com/krabhi75/aetherclose  
+**Product:** KrishiSaathi / LIAA — Hindi voice agricultural assistant + field CRM  
+**Repo:** https://github.com/krabhi75/LIAA  
 **Voice layer (mandatory):** Agora Conversational AI Engine  
-**Primary demo:** http://localhost:3000/demo  
+**Primary demo:** https://liaa-ebon.vercel.app/demo  
+**Outbound paths:** [OUTBOUND_PATHS.md](./OUTBOUND_PATHS.md) — Agora Campaign vs CRM Vobiz XML
 
 This document is the source of truth for how the system is built, how voice stays on Agora, and how multi-tool actions surface on the desk.
 

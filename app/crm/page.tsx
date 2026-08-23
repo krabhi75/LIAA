@@ -155,6 +155,24 @@ export default function FarmersPage() {
           Manage field partners. Inbound on +91 79714 43138 creates a farmer
           automatically.
         </p>
+        <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          <strong>CRM Call</strong> uses Vobiz KrishiSaathi (Polly.Aditi Hindi).
+          It updates this dashboard and{" "}
+          <Link href="/crm/calls" className="underline">
+            /crm/calls
+          </Link>
+          , not Agora Campaign stats. For Agora outbound analytics, dial from{" "}
+          <strong>Agora Console → Campaigns</strong>. See{" "}
+          <a
+            className="underline"
+            href="https://github.com/krabhi75/LIAA/blob/main/docs/OUTBOUND_PATHS.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            OUTBOUND_PATHS.md
+          </a>
+          .
+        </p>
       </div>
 
       <form

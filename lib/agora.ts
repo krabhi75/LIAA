@@ -69,6 +69,13 @@ export function publicBaseUrl(req?: Request): string | null {
   return `${proto}://${host}`;
 }
 
+/** Always a public HTTPS origin for Vobiz Answer/Gather callbacks. */
+export function voicePublicBase(req?: Request): string {
+  return (
+    publicBaseUrl(req)?.replace(/\/$/, "") || "https://liaa-ebon.vercel.app"
+  );
+}
+
 export function mcpKey(): string {
   return process.env.AETHER_MCP_KEY ?? "change-me-before-demo";
 }

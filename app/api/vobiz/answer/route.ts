@@ -1,36 +1,47 @@
-import { NextResponse } from "next/server";
-import { publicBaseUrl } from "@/lib/agora";
+import { after } from "next/server";
+import { voicePublicBase } from "@/lib/agora";
 import { xmlResponse, parseVobizBody, speakGatherXml } from "@/lib/vobiz";
 import { findCallByUuid, updateCall } from "@/lib/crm-store";
 import { ingestCallWebhook, flattenWebhook } from "@/lib/crm-ingest";
 
-export async function POST(req: Request) {
-  const params = await parseVobizBody(req);
-  const uuid = params.CallUUID || params.RequestUUID || "";
-  if (uuid) {
+export const dynamic = "force-dynamic";
+export const maxDuration = 15;
+
+function answerXml(req: Request): Response {
+  const action = `${voicePublicBase(req)}/api/vobiz/gather`;
+  return xmlResponse(
+    speakGatherXml(
+      "Namaste. This is Liaa, your farm helper. Please say your crop and what you are seeing on the plants.",
+      action,
+    ),
+  );
+}
+
+async function markAnswered(req: Request) {
+  try {
+    const params = await parseVobizBody(req);
+    const uuid = params.CallUUID || params.RequestUUID || "";
+    if (!uuid) return;
     const existing = await findCallByUuid(uuid);
     if (existing) {
       await updateCall(existing.id, {
         status: "in-progress",
         answeredAt: new Date().toISOString(),
       });
-    } else {
-      await ingestCallWebhook("vobiz", flattenWebhook(params));
+      return;
     }
+    await ingestCallWebhook("vobiz", flattenWebhook(params));
+  } catch (err) {
+    console.error("[vobiz/answer] persist failed", err);
   }
-  const base = publicBaseUrl(req);
-  const action = `${base}/api/vobiz/gather`;
-  return xmlResponse(
-    speakGatherXml(
-      "Namaste. Main Liaa, kheti sahayak. Kaun si fasal hai aur kya dikh raha hai?",
-      action,
-    ),
-  );
 }
 
-export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    hint: "Vobiz Answer URL for CRM XML outbound. Do not attach this Voice App to the SIP DID.",
-  });
+export async function POST(req: Request) {
+  const xml = answerXml(req);
+  after(() => markAnswered(req.clone()));
+  return xml;
+}
+
+export async function GET(req: Request) {
+  return answerXml(req);
 }

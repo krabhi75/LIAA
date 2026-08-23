@@ -11,21 +11,22 @@ export function vobizXml(inner: string): string {
 }
 
 export function speakGatherXml(prompt: string, actionUrl: string): string {
-  const speak = `<Speak voice="WOMAN" language="en-IN">${xmlEscape(prompt)}</Speak>`;
+  const speak = `<Speak voice="WOMAN" language="en-US">${xmlEscape(prompt)}</Speak>`;
+  const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
   return vobizXml(
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="hi-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="12" hints="fasal,patte,keeda,gehun,gaon,paani,expert">${speak}</Gather><Speak language="en-IN">I did not hear you. Goodbye.</Speak><Hangup/>`,
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="en-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="15">${speak}</Gather><Speak voice="WOMAN" language="en-US">Sorry, I did not hear you.</Speak><Redirect>${xmlEscape(answerUrl)}</Redirect>`,
   );
 }
 
 export function hangupXml(message: string): string {
   return vobizXml(
-    `<Speak voice="WOMAN" language="en-IN">${xmlEscape(message)}</Speak><Hangup/>`,
+    `<Speak voice="WOMAN" language="en-US">${xmlEscape(message)}</Speak><Hangup/>`,
   );
 }
 
 export function xmlResponse(xml: string): Response {
   return new Response(xml, {
-    headers: { "Content-Type": "text/xml; charset=utf-8" },
+    headers: { "Content-Type": "application/xml; charset=utf-8" },
   });
 }
 

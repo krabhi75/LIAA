@@ -23,8 +23,12 @@ type Farmer = {
   phone: string;
   village?: string;
   district?: string;
+  city?: string;
+  state?: string;
   crop?: string;
   company?: string;
+  weatherSummary?: string;
+  weatherAt?: string | null;
   notes: string;
 };
 
@@ -47,6 +51,8 @@ const EMPTY_FORM = {
   phone: "",
   village: "",
   district: "",
+  city: "",
+  state: "",
   crop: "",
 };
 
@@ -69,6 +75,8 @@ export default function FarmerProfilePage() {
         phone: next.farmer.phone ?? "",
         village: next.farmer.village || next.farmer.company || "",
         district: next.farmer.district ?? "",
+        city: next.farmer.city ?? "",
+        state: next.farmer.state ?? "",
         crop: next.farmer.crop ?? "",
       });
     }
@@ -250,12 +258,33 @@ export default function FarmerProfilePage() {
                     onChange={(v) => setForm((f) => ({ ...f, district: v }))}
                   />
                   <Field
+                    label="City"
+                    value={form.city}
+                    disabled={!editing}
+                    onChange={(v) => setForm((f) => ({ ...f, city: v }))}
+                  />
+                  <Field
+                    label="State"
+                    value={form.state}
+                    disabled={!editing}
+                    onChange={(v) => setForm((f) => ({ ...f, state: v }))}
+                  />
+                  <Field
                     label="Primary crop"
                     value={form.crop || latest?.crop || ""}
                     disabled={!editing}
                     onChange={(v) => setForm((f) => ({ ...f, crop: v }))}
                   />
                 </div>
+                {profile.farmer.weatherSummary ? (
+                  <div className="mt-3 rounded-lg bg-ks-low p-3 text-sm">
+                    <p className="text-xs font-semibold uppercase text-ks-muted">Live weather</p>
+                    <p className="mt-1">{profile.farmer.weatherSummary}</p>
+                    {profile.farmer.weatherAt ? (
+                      <p className="mt-1 text-xs text-ks-muted">{when(profile.farmer.weatherAt)}</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {editing ? (
                   <button
                     className="mt-4 w-full rounded-lg bg-ks-secondary px-3 py-2 text-sm font-medium text-white disabled:opacity-40"

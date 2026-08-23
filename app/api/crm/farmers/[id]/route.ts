@@ -30,6 +30,8 @@ export async function PATCH(
     village?: string;
     district?: string;
     crop?: string;
+    city?: string;
+    state?: string;
   };
   const farmer = await updateContact(resolved, body);
   if (!farmer) {
@@ -58,13 +60,17 @@ export async function POST(
     village?: string;
     district?: string;
     crop?: string;
+    city?: string;
+    state?: string;
   };
   if (
     body.name ||
     body.phone ||
     body.village ||
     body.district ||
-    body.crop
+    body.crop ||
+    body.city ||
+    body.state
   ) {
     const farmer = await updateContact(resolved, body);
     if (!farmer) {

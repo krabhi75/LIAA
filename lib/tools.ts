@@ -1,6 +1,9 @@
 import { addMemory, getCachedMemories, loadMemories } from "./memory";
 import { recordTool } from "./store";
 import { createAgriCase, escalateAgriCase } from "./agri-cases";
+import { fetchLiveWeather } from "./weather";
+import { findCallByUuid, upsertFarmerFacts } from "./crm-store";
+import { LIAA_INSTRUCTIONS } from "./prompt";
 
 export const TOOL_NAMES = [
   "capture_field",
@@ -15,12 +18,16 @@ export const TOOL_NAMES = [
 export type ToolName = (typeof TOOL_NAMES)[number];
 
 type FieldState = {
+  name: string;
   crop: string;
   village: string;
   district: string;
+  city: string;
+  state: string;
   symptoms: string;
   started: string;
   watering: string;
+  weatherSpoken: string;
   asked: string[];
   caseId: string | null;
   escalated: boolean;
@@ -32,12 +39,16 @@ function field(channel: string): FieldState {
   let s = channels.get(channel);
   if (!s) {
     s = {
+      name: "",
       crop: "",
       village: "",
       district: "",
+      city: "",
+      state: "",
       symptoms: "",
       started: "",
       watering: "",
+      weatherSpoken: "",
       asked: [],
       caseId: null,
       escalated: false,
@@ -45,6 +56,34 @@ function field(channel: string): FieldState {
     channels.set(channel, s);
   }
   return s;
+}
+
+async function persistFarmer(
+  channel: string,
+  extra: {
+    name?: string;
+    village?: string;
+    district?: string;
+    city?: string;
+    state?: string;
+    crop?: string;
+    weatherSummary?: string;
+    weatherAt?: string;
+  } = {},
+) {
+  const call = await findCallByUuid(channel);
+  if (!call?.phone) return;
+  const s = field(channel);
+  await upsertFarmerFacts(call.phone, {
+    name: extra.name || s.name,
+    village: extra.village || s.village,
+    district: extra.district || s.district,
+    city: extra.city || s.city,
+    state: extra.state || s.state,
+    crop: extra.crop || s.crop,
+    weatherSummary: extra.weatherSummary || s.weatherSpoken,
+    weatherAt: extra.weatherAt,
+  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -98,8 +137,11 @@ export const TOOL_DEFS = [
       type: "object",
       properties: {
         crop: { type: "string" },
+        farmer_name: { type: "string" },
         village: { type: "string" },
         district: { type: "string" },
+        city: { type: "string" },
+        state: { type: "string" },
         symptoms: { type: "string" },
         started: { type: "string" },
         watering: { type: "string" },
@@ -109,7 +151,7 @@ export const TOOL_DEFS = [
   {
     name: "get_weather",
     description:
-      "Live Open-Meteo weather for the farmer village/district. Required before advice.",
+      "Live Open-Meteo weather for the farmer city/district/village. Call after location is known. Never invent weather.",
     inputSchema: {
       type: "object",
       properties: { place: { type: "string" } },
@@ -169,23 +211,18 @@ export const TOOL_DEFS = [
 ];
 
 async function liveWeather(place: string) {
-  const loc = placeOf(place);
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,precipitation,relative_humidity_2m,wind_speed_10m`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("weather unavailable");
-  const data = (await res.json()) as {
-    current?: {
-      temperature_2m?: number;
-      precipitation?: number;
-      relative_humidity_2m?: number;
-    };
-  };
-  const c = data.current ?? {};
+  const w = await fetchLiveWeather(place);
+  if (!w) throw new Error("weather unavailable");
   return {
-    place: loc.district,
-    tempC: c.temperature_2m,
-    rainMm: c.precipitation,
-    humidity: c.relative_humidity_2m,
+    place: w.label,
+    city: w.city,
+    district: w.district,
+    state: w.state,
+    tempC: w.tempC,
+    rainMm: w.rainMm,
+    rainTodayMm: w.rainTodayMm,
+    humidity: w.humidity,
+    spoken: w.spokenHi,
     source: "Open-Meteo",
   };
 }
@@ -221,8 +258,9 @@ function advisory(crop: string, symptoms: string, topic: string) {
 }
 
 function nextQuestion(s: FieldState): string {
+  if (!s.name) return "Aapka naam kya hai?";
+  if (!s.village && !s.district && !s.city) return "Aap kis city ya district mein hain?";
   if (!s.crop) return "Kaun si fasal hai?";
-  if (!s.village && !s.district) return "Kaun sa gaon ya zila hai?";
   if (!s.symptoms) return "Patte, jhad, keeda — kya dikh raha hai?";
   if (!s.started) return "Kab se shuru hua?";
   if (!s.watering) return "Paani kab diya tha?";
@@ -235,23 +273,23 @@ export async function buildLiaaSystemPrompt(channel: string): Promise<string> {
   const known = await loadMemories();
   const missing = nextQuestion(s);
   return [
-    "You are Liaa, a field voice assistant for Indian farmers and rural workers — not a sales bot, not a crop encyclopedia.",
-    "Speak Hindi first. If the farmer uses Hinglish or English, match them. Never use American English phrasing. One or two spoken sentences. No markdown, lists, or emoji.",
-    'Never read URLs or ids aloud — say "case screen par hai".',
+    LIAA_INSTRUCTIONS,
     `Now: ${now.toISOString()}.`,
-    "Do NOT diagnose on the first symptom. Ask follow-ups with capture_field.",
-    "Order: crop → village/district → what they see → since when → watering. Then get_weather, then get_advisory.",
-    "If unsure, say so in Hindi. Then create_case and escalate_expert so the farmer never repeats the story.",
-    "Code-switch if they mix English. Keep language simple for low literacy.",
-    "Never invent pesticide doses or government payout amounts.",
-    missing ? `Still missing: ${missing}` : "Intake complete enough for weather + case.",
+    missing ? `Still missing: ${missing}` : "Name and location known — use get_weather if not fetched, then help with the farmer intent.",
     `Session so far: ${JSON.stringify({
+      name: s.name,
       crop: s.crop,
       village: s.village,
+      city: s.city,
+      district: s.district,
+      state: s.state,
       symptoms: s.symptoms,
-      started: s.started,
+      weather: s.weatherSpoken,
       caseId: s.caseId,
     })}`,
+    s.weatherSpoken
+      ? `Live weather (already fetched, speak naturally, do not invent): ${s.weatherSpoken}`
+      : "No live weather yet. After location, call get_weather.",
     known.length ? `Memory: ${known.join("; ")}` : "",
   ]
     .filter(Boolean)
@@ -271,12 +309,16 @@ export async function runTool(
 
   switch (name) {
     case "capture_field": {
+      if (typeof args.farmer_name === "string") s.name = args.farmer_name;
       if (typeof args.crop === "string") s.crop = args.crop;
       if (typeof args.village === "string") s.village = args.village;
       if (typeof args.district === "string") s.district = args.district;
+      if (typeof args.city === "string") s.city = args.city;
+      if (typeof args.state === "string") s.state = args.state;
       if (typeof args.symptoms === "string") s.symptoms = args.symptoms;
       if (typeof args.started === "string") s.started = args.started;
       if (typeof args.watering === "string") s.watering = args.watering;
+      await persistFarmer(channel);
       const ask = nextQuestion(s);
       output = {
         saved: {
@@ -298,25 +340,41 @@ export async function runTool(
       break;
     }
     case "get_weather": {
-      const place = String(args.place || s.village || s.district || "nashik");
+      const place = String(args.place || s.city || s.village || s.district || "");
       try {
         const w = await liveWeather(place);
+        s.city = s.city || w.city;
+        s.district = s.district || w.district;
+        s.state = s.state || w.state;
+        s.weatherSpoken = w.spoken;
+        await persistFarmer(channel, {
+          city: w.city,
+          district: w.district,
+          state: w.state,
+          village: s.village || w.city,
+          weatherSummary: w.spoken,
+          weatherAt: new Date().toISOString(),
+        });
         output = {
           ...w,
           card: card(
             "Weather",
             "open-meteo",
-            `${w.place}: ${w.tempC}°C`,
-            `Rain ${w.rainMm ?? 0} mm · humidity ${w.humidity ?? "—"}% · live API`,
+            `${w.place}: ${w.tempC ?? "—"}°C`,
+            w.spoken,
             { demo: false },
           ),
         };
       } catch {
         output = {
           error: "weather unavailable",
-          card: card("Weather", "open-meteo", "Could not fetch", "Say so out loud. Do not guess.", {
-            ask: true,
-          }),
+          card: card(
+            "Weather",
+            "open-meteo",
+            "Could not fetch",
+            "Do not invent weather. Ask for a clearer city or district.",
+            { ask: true },
+          ),
         };
       }
       break;

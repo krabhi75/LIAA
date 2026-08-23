@@ -52,6 +52,7 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [cases, setCases] = useState<AgriCase[]>([]);
+  const [hello, setHello] = useState("Good evening");
 
   const load = useCallback(async () => {
     const [cRes, kRes, aRes] = await Promise.all([
@@ -68,6 +69,15 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    const hour = Number(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Kolkata",
+        hour: "numeric",
+        hour12: false,
+      }).format(new Date()),
+    );
+    if (hour < 12) setHello("Good morning");
+    else setHello("Good evening");
     void load();
     const t = setInterval(() => void load(), 4000);
     return () => clearInterval(t);
@@ -118,7 +128,7 @@ export default function DashboardPage() {
     <Shell title="Overview">
       <header className="mb-6">
         <h2 className="ks-display text-3xl font-bold text-ks-on-surface md:text-4xl">
-          Good morning, Abhishek
+          {hello}, Abhishek
         </h2>
         <p className="mt-2 max-w-3xl text-base text-ks-muted md:text-lg">
           Live field operations across Liaa voice, inbound DID, and outbound CRM

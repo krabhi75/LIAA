@@ -123,8 +123,13 @@ model CrmContact {
   company   String    @default("")
   village   String    @default("")
   district  String    @default("")
-  crop      String    @default("")
-  notes     String    @default("")
+  crop            String    @default("")
+  city            String    @default("")
+  state           String    @default("")
+  weatherSummary  String    @default("")
+  weatherAt       DateTime?
+  notes           String    @default("")
+  profileJson     String    @default("{}")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   calls     CrmCall[]

@@ -11,7 +11,7 @@ function answerXml(req: Request): Response {
   const action = `${voicePublicBase(req)}/api/vobiz/gather`;
   return xmlResponse(
     speakGatherXml(
-      "Namaste, main Liaa hoon, aapki kheti sahayika. Fasal ka naam aur ped par kya dikh raha hai, Hindi, Hinglish, ya English mein boliye.",
+      "Namaste, main KrishiSaathi hoon. Main aapki kheti se judi problems mein madad kar sakta hoon. Sabse pehle aapka naam kya hai?",
       action,
     ),
   );

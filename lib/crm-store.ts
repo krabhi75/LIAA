@@ -11,6 +11,10 @@ export type StoredContact = {
   village: string;
   district: string;
   crop: string;
+  city: string;
+  state: string;
+  weatherSummary: string;
+  weatherAt: string | null;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -108,11 +112,20 @@ function serializeContact(c: {
   village?: string;
   district?: string;
   crop?: string;
+  city?: string;
+  state?: string;
+  weatherSummary?: string;
+  weatherAt?: Date | string | null;
   notes: string;
   createdAt: Date | string;
   updatedAt: Date | string;
 }): StoredContact {
   const village = c.village || c.company || "";
+  const weatherAt = c.weatherAt
+    ? typeof c.weatherAt === "string"
+      ? c.weatherAt
+      : c.weatherAt.toISOString()
+    : null;
   return {
     id: c.id,
     name: c.name,
@@ -121,6 +134,10 @@ function serializeContact(c: {
     village,
     district: c.district || "",
     crop: c.crop || "",
+    city: c.city || "",
+    state: c.state || "",
+    weatherSummary: c.weatherSummary || "",
+    weatherAt,
     notes: c.notes,
     createdAt: typeof c.createdAt === "string" ? c.createdAt : c.createdAt.toISOString(),
     updatedAt: typeof c.updatedAt === "string" ? c.updatedAt : c.updatedAt.toISOString(),
@@ -185,6 +202,10 @@ export async function createContact(input: {
     village: input.company ?? "",
     district: "",
     crop: "",
+    city: "",
+    state: "",
+    weatherSummary: "",
+    weatherAt: null,
     notes: "",
     createdAt: nowIso(),
     updatedAt: nowIso(),
@@ -292,6 +313,10 @@ export async function updateContact(
     village?: string;
     district?: string;
     crop?: string;
+    city?: string;
+    state?: string;
+    weatherSummary?: string;
+    weatherAt?: string | null;
     company?: string;
   },
 ): Promise<StoredContact | null> {
@@ -299,7 +324,9 @@ export async function updateContact(
   const village = data.village?.trim();
   const district = data.district?.trim();
   const crop = data.crop?.trim();
-  const company = data.company?.trim() ?? village;
+  const city = data.city?.trim();
+  const state = data.state?.trim();
+  const company = data.company?.trim() ?? village ?? city;
   if (prismaOk()) {
     try {
       const existing = await prisma.crmContact.findUnique({ where: { id } });
@@ -312,6 +339,14 @@ export async function updateContact(
           village: village ?? existing.village,
           district: district ?? existing.district,
           crop: crop ?? existing.crop,
+          city: city ?? existing.city,
+          state: state ?? existing.state,
+          weatherSummary: data.weatherSummary ?? existing.weatherSummary,
+          weatherAt: data.weatherAt
+            ? new Date(data.weatherAt)
+            : data.weatherAt === null
+              ? null
+              : existing.weatherAt,
           company: company || existing.company,
         },
       });
@@ -328,10 +363,45 @@ export async function updateContact(
   if (village != null) row.village = village;
   if (district != null) row.district = district;
   if (crop != null) row.crop = crop;
+  if (city != null) row.city = city;
+  if (state != null) row.state = state;
+  if (data.weatherSummary != null) row.weatherSummary = data.weatherSummary;
+  if (data.weatherAt !== undefined) row.weatherAt = data.weatherAt;
   if (company) row.company = company;
   row.updatedAt = nowIso();
   persist(bag);
   return row;
+}
+
+export async function upsertFarmerFacts(
+  phoneRaw: string,
+  facts: {
+    name?: string;
+    village?: string;
+    district?: string;
+    city?: string;
+    state?: string;
+    crop?: string;
+    weatherSummary?: string;
+    weatherAt?: string;
+  },
+): Promise<StoredContact | null> {
+  const phone = normalizePhone(phoneRaw);
+  if (!phone) return null;
+  const existing = await findContactByPhone(phone);
+  const name = facts.name && facts.name !== "Farmer" ? facts.name : existing?.name || "Farmer";
+  if (!existing) {
+    const created = await createContact({
+      name,
+      phone,
+      company: facts.village || facts.city || "",
+    });
+    return updateContact(created.id, facts);
+  }
+  return updateContact(existing.id, {
+    ...facts,
+    name: facts.name && facts.name !== "Farmer" ? facts.name : undefined,
+  });
 }
 
 export async function listCalls(): Promise<

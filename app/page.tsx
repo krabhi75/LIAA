@@ -16,7 +16,6 @@ import { CallMixChart } from "@/components/stitch/CallMixChart";
 import {
   buildCropBuckets,
   buildIssueBuckets,
-  collectInsightTexts,
 } from "@/lib/dashboard-insights";
 
 async function fetchCrm(path: string) {
@@ -90,19 +89,14 @@ export default function DashboardPage() {
     { label: "Expert escalated", value: escalated },
   ];
 
-  const insightTexts = useMemo(
-    () => collectInsightTexts(cases, calls, contacts),
-    [cases, calls, contacts],
-  );
-
   const crops = useMemo(
-    () => buildCropBuckets(cases, calls, contacts),
-    [cases, calls, contacts],
+    () => buildCropBuckets(contacts, calls, cases),
+    [contacts, calls, cases],
   );
 
   const issues = useMemo(
-    () => buildIssueBuckets(insightTexts),
-    [insightTexts],
+    () => buildIssueBuckets(contacts, calls, cases),
+    [contacts, calls, cases],
   );
 
   return (
@@ -188,13 +182,16 @@ export default function DashboardPage() {
             <h3 className="ks-record-panel__title">Top farmer issues</h3>
           </div>
           <div className="ks-record-panel__body">
-          {issues.every((i) => i.n === 0) ? (
+          {contacts.length === 0 ? (
             <p className="text-sm text-ks-muted">
-              Issues appear from call transcripts and case summaries (Hindi /
-              Hinglish). Place a call or open a case on a farmer record.
+              Issues appear once farmers are in the CRM — one category per
+              farmer from call / case context.
             </p>
           ) : (
             <div className="space-y-4">
+              <p className="text-xs text-ks-muted">
+                {contacts.length} farmers · one issue each
+              </p>
               {issues.map((i) => (
                 <div key={i.label}>
                   <div className="mb-1 flex justify-between text-sm">
@@ -223,11 +220,15 @@ export default function DashboardPage() {
           <div className="ks-record-panel__body">
           {crops.length === 0 ? (
             <p className="text-sm text-ks-muted">
-              Crops are inferred from speech (e.g. kapas, dhan, gehun) and
-              farmer profiles. Updates every 3s with new calls.
+              Set a crop on each farmer profile — focus splits only known crops
+              (never Unknown).
             </p>
           ) : (
             <div className="space-y-3">
+              <p className="text-xs text-ks-muted">
+                From farmer crop fields · {crops.reduce((s, c) => s + c.count, 0)}{" "}
+                with known crop
+              </p>
               {crops.map((c) => (
                 <div key={c.name} className="flex items-center gap-3">
                   <span className="w-24 truncate text-sm">{c.name}</span>

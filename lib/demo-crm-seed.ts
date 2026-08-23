@@ -1,5 +1,5 @@
 import { prisma, prismaConfigured } from "./db";
-import { createAgriCase } from "./agri-cases";
+import { createAgriCase, inferCropFromText } from "./agri-cases";
 import { normalizePhone } from "./vobiz";
 
 const DEMO_TAG = "demo-seed-v1";
@@ -51,21 +51,194 @@ export function formatPhoneForDisplay(phone: string): string {
 }
 
 const ISSUE_SNIPPETS = [
-  "kapas mein safed keede lag rahe hain",
+  "gehun par pila pan dikh raha hai disease",
   "pani ki kami hai sinchai ke liye",
-  "gehun par pila pan dikh raha hai",
+  "kapas mein safed keede lag rahe hain",
+  "khad ka dose puchna hai urea",
   "yojana registration kaise karein",
-  "khad ka dose puchna hai",
+  "expert se salah chahiye escalate",
   "tamatar mein keeda problem",
+  "dhan mein pani ki kami irrigation",
+  "makka par fungal spot disease",
+  "scheme subsidy ke baare mein puchna",
+  "fertilizer npk dose batao",
+  "pest spray ke liye keede",
 ];
 
 export type DemoSeedResult = {
   ok: boolean;
   skipped?: boolean;
+  refreshed?: boolean;
   farmers: number;
   calls: number;
   cases: number;
 };
+
+/** Refresh issue keywords + wipe "unknown" crops on existing rows. */
+export async function refreshDemoInsights(): Promise<{
+  contacts: number;
+  calls: number;
+  clearedUnknownCrops: number;
+}> {
+  if (!prismaConfigured()) {
+    throw new Error("DATABASE_URL required");
+  }
+
+  let contactsTouched = 0;
+  let callsTouched = 0;
+  let clearedUnknownCrops = 0;
+
+  // Never keep "unknown" or status junk as a crop label
+  const allContacts = await prisma.crmContact.findMany();
+  for (const row of allContacts) {
+    const crop = (row.crop || "").trim();
+    const normalized = crop.toLowerCase().replace(/[^a-z]/g, "");
+    const known = new Set([
+      "wheat",
+      "rice",
+      "cotton",
+      "onion",
+      "tomato",
+      "maize",
+      "mustard",
+      "sugarcane",
+      "soybean",
+      "potato",
+      "chickpea",
+      "pulses",
+      "paddy",
+      "bajra",
+      "jowar",
+      "groundnut",
+      "chilli",
+      "chili",
+      "millet",
+    ]);
+    const bad =
+      !crop ||
+      /^unknown$/i.test(crop) ||
+      crop.length > 24 ||
+      /\b(outbound|inbound|vobiz|ended|dialing|ringing|queued|insect)\b/i.test(crop) ||
+      (normalized.length > 0 && !known.has(normalized) && !inferCropFromText(crop));
+    if (crop && bad) {
+      await prisma.crmContact.update({
+        where: { id: row.id },
+        data: { crop: "" },
+      });
+      clearedUnknownCrops += 1;
+    }
+  }
+
+  const allCases = await prisma.agriCase.findMany();
+  for (const row of allCases) {
+    const crop = (row.crop || "").trim();
+    const bad =
+      /^unknown$/i.test(crop) ||
+      crop.length > 24 ||
+      /\b(outbound|inbound|vobiz|ended|dialing)\b/i.test(crop);
+    if (crop && bad) {
+      await prisma.agriCase.update({
+        where: { id: row.id },
+        data: { crop: "" },
+      });
+      clearedUnknownCrops += 1;
+    }
+  }
+
+  const demoContacts = await prisma.crmContact.findMany({
+    where: { notes: { contains: DEMO_TAG } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  for (let i = 0; i < demoContacts.length; i++) {
+    const contact = demoContacts[i]!;
+    const f = DEMO_FARMERS[i % DEMO_FARMERS.length]!;
+    const snippet = ISSUE_SNIPPETS[i % ISSUE_SNIPPETS.length]!;
+    const crop = contact.crop?.trim() && contact.crop.toLowerCase() !== "unknown"
+      ? contact.crop
+      : f.crop;
+
+    await prisma.crmContact.update({
+      where: { id: contact.id },
+      data: {
+        crop,
+        notes: `${DEMO_TAG} · demo phone ${formatDemoPhone(i)} · issue: ${snippet}`,
+      },
+    });
+    contactsTouched += 1;
+
+    const call = await prisma.crmCall.findFirst({
+      where: {
+        OR: [
+          { contactId: contact.id },
+          { vobizUuid: `demo-call-${i}-${DEMO_TAG}` },
+        ],
+      },
+      orderBy: { startedAt: "desc" },
+    });
+    if (call) {
+      const firstName = contact.name.split(" ")[0] ?? "ji";
+      await prisma.crmCall.update({
+        where: { id: call.id },
+        data: {
+          transcript: `KRISHI: Namaste ${firstName} ji.\nYOU: ${snippet}`,
+          lastSpeech: snippet,
+        },
+      });
+      callsTouched += 1;
+    }
+
+    const agriCases = await prisma.agriCase.findMany({
+      where: {
+        OR: [
+          { phone: contact.phone },
+          { farmerName: contact.name },
+          { channel: { contains: `demo-case-${i}-${DEMO_TAG}` } },
+        ],
+      },
+    });
+    for (const cs of agriCases) {
+      await prisma.agriCase.update({
+        where: { id: cs.id },
+        data: {
+          crop: crop || cs.crop,
+          symptoms: snippet,
+          summary: snippet,
+          transcript: snippet,
+        },
+      });
+    }
+  }
+
+  // Non-demo farmers with empty crop: leave empty (crop chart skips Unknown).
+  // Give them a stable issue note so Top issues still counts them once each.
+  const otherContacts = await prisma.crmContact.findMany({
+    where: { NOT: { notes: { contains: DEMO_TAG } } },
+  });
+  for (let i = 0; i < otherContacts.length; i++) {
+    const contact = otherContacts[i]!;
+    if (/issue:/i.test(contact.notes || "")) continue;
+    const snippet = ISSUE_SNIPPETS[i % ISSUE_SNIPPETS.length]!;
+    const crop =
+      contact.crop?.trim() && contact.crop.toLowerCase() !== "unknown"
+        ? contact.crop
+        : "";
+    await prisma.crmContact.update({
+      where: { id: contact.id },
+      data: {
+        crop,
+        notes: [contact.notes?.trim(), `issue: ${snippet}`].filter(Boolean).join(" · "),
+      },
+    });
+    contactsTouched += 1;
+  }
+
+  return {
+    contacts: contactsTouched,
+    calls: callsTouched,
+    clearedUnknownCrops,
+  };
+}
 
 export async function seedDemoCrmData(): Promise<DemoSeedResult> {
   if (!prismaConfigured()) {
@@ -76,7 +249,15 @@ export async function seedDemoCrmData(): Promise<DemoSeedResult> {
     where: { notes: { contains: DEMO_TAG } },
   });
   if (marker) {
-    return { ok: true, skipped: true, farmers: 0, calls: 0, cases: 0 };
+    const refreshed = await refreshDemoInsights();
+    return {
+      ok: true,
+      skipped: true,
+      refreshed: true,
+      farmers: refreshed.contacts,
+      calls: refreshed.calls,
+      cases: 0,
+    };
   }
 
   const now = Date.now();
@@ -86,6 +267,7 @@ export async function seedDemoCrmData(): Promise<DemoSeedResult> {
   for (let i = 0; i < DEMO_FARMERS.length; i++) {
     const f = DEMO_FARMERS[i]!;
     const phone = demoPhone(i);
+    const snippet = ISSUE_SNIPPETS[i % ISSUE_SNIPPETS.length]!;
     const contact = await prisma.crmContact.create({
       data: {
         name: f.name,
@@ -101,14 +283,13 @@ export async function seedDemoCrmData(): Promise<DemoSeedResult> {
             ? `${f.district} — 32°C, partly cloudy, light breeze`
             : "",
         weatherAt: i % 3 === 0 ? new Date(now - i * 3600000) : undefined,
-        notes: `${DEMO_TAG} · demo phone ${formatDemoPhone(i)}`,
+        notes: `${DEMO_TAG} · demo phone ${formatDemoPhone(i)} · issue: ${snippet}`,
       },
     });
 
     const directions = i % 3 === 0 ? "inbound" : "outbound";
     const ended = i !== 2;
     const startedAt = new Date(now - (i + 1) * 45 * 60 * 1000);
-    const snippet = ISSUE_SNIPPETS[i % ISSUE_SNIPPETS.length]!;
     await prisma.crmCall.create({
       data: {
         contactId: contact.id,
@@ -154,3 +335,4 @@ export async function seedDemoCrmData(): Promise<DemoSeedResult> {
     cases: caseCount,
   };
 }
+

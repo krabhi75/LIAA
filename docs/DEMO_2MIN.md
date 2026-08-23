@@ -1,59 +1,48 @@
-# 2-minute demo video — production guide
+# 2-minute pitch — production guide
 
-## Fastest path (audio + visuals included)
+## Fastest path
 
-1. Deploy or run locally with pitch audio generated (`npm run pitch:audio`).
+1. Generate voiceover once: `npm run pitch:audio` (needs `ELEVENLABS_API_KEY`).
 2. Open **https://liaa-ebon.vercel.app/pitch** fullscreen (`F11`).
-3. Click **Play pitch** (or press **Space**).
-4. Screen-record **2 minutes** — Windows `Win+G`, OBS, or Loom.
-5. Export MP4 1080p → upload to hackathon portal.
+3. Click **Play pitch** (or **Space**).
+4. Screen-record ~2 minutes — Windows `Win+G`, OBS, or Loom.
+5. Export MP4 1080p → upload.
 
-Controls: **Space** pause · **R** restart · **N** toggle captions
-
----
-
-## Optional: mix live app B-roll
-
-Record `/pitch` for voiceover + slides, then cut in 5–10s clips from:
-
-| Clip | URL | When in pitch |
-|------|-----|----------------|
-| Dashboard | `/` | Beat “live metrics” |
-| Voice desk | `/demo` | Beat “live desk” |
-| Farmers | `/crm` | Beat “field CRM” |
-| Farmer record | `/crm/farmers/[id]` | Beat “disposition” |
-| Live calls | `/crm/calls` | Beat “monitor” |
+Controls: **Space** pause · **R** restart · **N** captions
 
 ---
 
-## Voice
+## Optional B-roll (cut into `/pitch`)
 
-Generated with **ElevenLabs Tara** (`tA6LGZpsqStKtSaGiXND`) — professional Indian female explainer.
-
-Regenerate: `npm run pitch:audio` (needs `ELEVENLABS_API_KEY` in `.env.local`).
+| Clip | URL | When |
+|------|-----|------|
+| Dashboard | `/` | Field intelligence · Call mix · issues · crops |
+| Voice desk | `/demo` | Live conversation |
+| Farmers | `/crm` | New Farmer · registry |
+| Farmer record | `/crm/farmers/[id]` | Disposition |
+| Live calls | `/crm/calls` | Monitor |
 
 ---
 
-## Click-by-click live demo (if recording app instead of `/pitch`)
+## Voice (credit-efficient)
 
-| Time | Action |
-|------|--------|
-| 0:00 | Open `/` — point at Live now + funnel |
-| 0:15 | `/demo` → Start conversation → allow mic |
-| 0:30 | Speak Hindi: name, city, crop problem |
-| 0:45 | Show tool card / transcript on desk |
-| 0:55 | `/crm` — farmers table |
-| 1:05 | Open farmer profile — timeline + case panel |
-| 1:15 | Select disposition → Update case |
-| 1:25 | `/crm/calls` — live monitor |
-| 1:35 | Back to `/demo` — interrupt mid-sentence (barge-in) |
-| 1:50 | Title: liaa-ebon.vercel.app · GitHub krabhi75/LIAA |
+- **Voice:** Nikhil — young conversational Indian male (`gX28yZeQHE9L4d5iYqPy`)
+- **Model:** `eleven_flash_v2_5` (~0.5 credit/character)
+- **Script:** ~1,100 characters → roughly **550–1,100 credits** per full generate
+- Regenerate only when narration changes: `npm run pitch:audio`
+
+Do not commit API keys. Set `ELEVENLABS_API_KEY` in `.env.local` only.
+
+---
+
+## Narration (synced to current UI — no sample phones)
+
+See `scripts/generate-pitch-audio.mjs` `SEGMENTS` and `app/pitch/page.tsx` `BEATS`.
 
 ---
 
 ## Upload checklist
 
-- Length ≤ 2:00 (or ≤ 5:00 if portal allows longer)
-- Shows **Agora** stack (Deepgram · OpenAI · ElevenLabs)
-- Shows **CRM** (not voice-only)
-- Mentions **Hindi / farmers / Bharat**
+- Length ≤ 2:00
+- Shows Agora stack + CRM (not voice-only)
+- Mentions Hindi / farmers / Bharat

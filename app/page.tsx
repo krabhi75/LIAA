@@ -143,7 +143,12 @@ export default function DashboardPage() {
         <MetricTile
           label="Last activity"
           value={lastCall ? when(lastCall.startedAt) : "—"}
-          hint={lastCall ? lastCall.phone : "No calls yet"}
+          hint={
+            lastCall
+              ? lastCall.contact?.name ||
+                (isInbound(lastCall.direction) ? "Inbound call" : "Outbound call")
+              : "No calls yet"
+          }
         />
       </section>
 

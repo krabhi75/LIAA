@@ -18,136 +18,118 @@ type Beat = {
 const BEATS: Beat[] = [
   {
     id: "01-intro",
-    seconds: 11,
+    seconds: 12,
     kicker: "EchoSphere · Agora Conversational AI",
     title: "KrishiSaathi",
-    line: "Hindi voice agricultural assistant — speaks, listens, captures, acts.",
+    line: "Hindi voice agricultural support — speaks, listens, captures, acts.",
     narration:
-      "Welcome to KrishiSaathi — a Hindi voice agricultural assistant on Agora Conversational AI. It speaks, listens, captures farmer data, and acts.",
+      "Welcome to KrishiSaathi — Hindi voice agricultural support on Agora Conversational AI. It speaks, listens, captures farmer facts, and acts.",
     audio: "/pitch-audio/01-intro.mp3",
     visual: "hero",
   },
   {
     id: "02-problem",
-    seconds: 11,
+    seconds: 12,
     kicker: "The problem",
     title: "Voice, not forms",
-    line: "Field workers need patient Hindi help on a phone call.",
-    bullets: ["Crop problems", "Local weather", "Expert escalation"],
+    line: "Patient Hindi help for crops, weather, and expert handoff.",
+    bullets: ["Crop issues", "Local weather", "Expert handoff"],
     narration:
-      "Farmers cannot navigate English forms. They need patient voice help for crop problems, local weather, and expert escalation — without repeating their story.",
+      "Farmers need patient voice help for crop issues, weather, and expert handoff — not English forms, and without telling their story twice.",
     audio: "/pitch-audio/02-problem.mp3",
     visual: "hero",
   },
   {
     id: "03-stack",
-    seconds: 11,
+    seconds: 10,
     kicker: "Voice stack",
     title: "ASR · LLM · TTS on Agora",
     line: "Agora owns RTC, barge-in, and the conversational engine.",
-    bullets: ["Deepgram nova-3 · Hindi", "OpenAI gpt-4o-mini", "ElevenLabs TTS"],
+    bullets: ["Deepgram · Hindi", "OpenAI gpt-4o-mini", "ElevenLabs TTS"],
     narration:
-      "Deepgram handles Hindi speech recognition. OpenAI GPT four-o-mini reasons. ElevenLabs speaks naturally. Agora owns the live channel and barge-in.",
+      "Deepgram understands Hindi. OpenAI reasons. ElevenLabs speaks. Agora owns the live channel and barge-in.",
     audio: "/pitch-audio/03-stack.mp3",
     visual: "stack",
   },
   {
     id: "04-desk",
-    seconds: 12,
-    kicker: "Live desk · /demo",
-    title: "Browser conversation",
-    line: "Hindi / Hinglish · interrupt mid-sentence · tools on screen.",
+    seconds: 13,
+    kicker: "Voice desk · /demo",
+    title: "Live conversation",
+    line: "Hindi / Hinglish · barge-in · tools on screen.",
     bullets: ["Start conversation", "Barge-in", "MCP action cards"],
     narration:
-      "On the live voice desk, start a conversation in Hindi or Hinglish. Interrupt mid-sentence — KrishiSaathi stops and listens. Tool cards update on screen in real time.",
+      "On the voice desk, start a Hindi conversation. Interrupt mid-sentence — KrishiSaathi stops and listens. Tool cards appear as it works.",
     audio: "/pitch-audio/04-desk.mp3",
     visual: "desk",
     broll: "/demo",
   },
   {
-    id: "05-crm",
-    seconds: 10,
-    kicker: "Field CRM · /crm",
-    title: "Farmers registry",
-    line: "Inbound DID + outbound dialer · structured from speech.",
-    bullets: ["Farmer accounts", "Call logging", "Search & filter"],
+    id: "05-dashboard",
+    seconds: 16,
+    kicker: "Operations · /",
+    title: "Field intelligence",
+    line: "Live tiles · Call mix donut · issues · crop focus.",
+    bullets: [
+      "Farmers · Calls · Live now",
+      "Escalations · Open cases",
+      "Call mix · Issues · Crops",
+    ],
     narration:
-      "The field CRM registers every farmer — inbound on our Indian number, or outbound from the desk. Structured facts flow from natural speech.",
-    audio: "/pitch-audio/05-crm.mp3",
-    visual: "crm",
-    broll: "/crm",
-  },
-  {
-    id: "06-profile",
-    seconds: 12,
-    kicker: "Farmer record",
-    title: "Cases & disposition",
-    line: "Timeline, weather, transcripts — resolve cases on the record.",
-    bullets: ["Call timeline", "Live weather", "Disposition: resolved · escalated"],
-    narration:
-      "Every farmer record shows call timeline, weather summary, transcripts, and open agri cases. Agents close cases with disposition — resolved, escalated, or follow-up.",
-    audio: "/pitch-audio/06-profile.mp3",
-    visual: "profile",
-    broll: "/crm",
-  },
-  {
-    id: "07-live",
-    seconds: 10,
-    kicker: "Operations",
-    title: "Live metrics",
-    line: "Dashboard + live calls monitor refresh every few seconds.",
-    bullets: ["Live now count", "Escalation funnel", "Real CRM data"],
-    narration:
-      "The operations dashboard and live calls monitor refresh every few seconds — real metrics for field teams, not static placeholders.",
-    audio: "/pitch-audio/07-live.mp3",
+      "The operations dashboard shows farmers, calls, live now, escalations, and open cases. Call mix is an inbound versus outbound donut. Top farmer issues and crop focus update from live CRM — real wheat, rice, cotton — never unknown.",
+    audio: "/pitch-audio/05-dashboard.mp3",
     visual: "live",
     broll: "/",
   },
   {
-    id: "08-phone",
-    seconds: 11,
-    kicker: "PSTN",
-    title: "Two outbound paths",
-    line: "Vobiz CRM dial · Agora Campaign / SIP inbound.",
-    bullets: ["+91 79714 43138", "Polly.Aditi Hindi CRM", "Agora Conversational AI"],
+    id: "06-crm",
+    seconds: 12,
+    kicker: "Field CRM · /crm",
+    title: "New Farmer",
+    line: "Green New Farmer · search · outbound dial.",
+    bullets: ["New Farmer (+)", "Farmer accounts", "Save & call"],
     narration:
-      "CRM outbound uses Vobiz with Indian voice. Agora campaigns and the browser demo use Conversational AI — two phone paths, one architecture.",
-    audio: "/pitch-audio/08-phone.mp3",
+      "In the farmers registry, tap New Farmer, search accounts, and place outbound calls. Structured facts flow from natural speech.",
+    audio: "/pitch-audio/06-crm.mp3",
+    visual: "crm",
+    broll: "/crm",
+  },
+  {
+    id: "07-profile",
+    seconds: 13,
+    kicker: "Farmer record",
+    title: "Cases & disposition",
+    line: "Timeline, weather, transcripts — resolve on the record.",
+    bullets: ["Call timeline", "Live weather", "Disposition"],
+    narration:
+      "Each farmer record shows timeline, weather, transcripts, and agri cases. Set disposition — resolved, escalated, or follow-up — on the record.",
+    audio: "/pitch-audio/07-profile.mp3",
+    visual: "profile",
+    broll: "/crm",
+  },
+  {
+    id: "08-live",
+    seconds: 14,
+    kicker: "Live calls · paths",
+    title: "Monitor & telephony",
+    line: "Live calls · Vobiz CRM · Agora desk.",
+    bullets: ["Live calls monitor", "Vobiz CRM dial", "Agora Conversational AI"],
+    narration:
+      "Live calls refresh every few seconds. CRM dials run on Vobiz with Indian voice. The browser desk uses Agora Conversational AI — two paths, one product.",
+    audio: "/pitch-audio/08-live.mp3",
     visual: "phone",
+    broll: "/crm/calls",
   },
   {
-    id: "09-tools",
-    seconds: 11,
-    kicker: "Intelligence",
-    title: "Weather & expert cases",
-    line: "Open-Meteo on profile · escalate with full context.",
-    bullets: ["Never invent weather", "create_case", "Expert handoff"],
-    narration:
-      "After location, live weather from Open-Meteo is spoken and stored on the profile. When confidence is low, expert cases carry full context already captured.",
-    audio: "/pitch-audio/09-tools.mp3",
-    visual: "tools",
-  },
-  {
-    id: "10-arch",
-    seconds: 10,
-    kicker: "Architecture",
-    title: "Production stack",
-    line: "Next.js · MCP tools · Neon Postgres CRM.",
-    narration:
-      "Agora-central voice, Next.js for tokens and MCP tools, Neon Postgres for CRM — production at liaa-ebon dot vercel dot app.",
-    audio: "/pitch-audio/10-arch.mp3",
-    visual: "arch",
-  },
-  {
-    id: "11-close",
-    seconds: 11,
+    id: "09-close",
+    seconds: 12,
     kicker: "Live now",
     title: "liaa-ebon.vercel.app",
     line: "Voice-first agri support for Bharat.",
     bullets: ["github.com/krabhi75/LIAA", "Deepgram · OpenAI · ElevenLabs · Agora"],
     narration:
-      "KrishiSaathi — voice-first agricultural support for Bharat. Live demo and open source on GitHub: krabhi75 slash LIAA. Thank you.",
-    audio: "/pitch-audio/11-close.mp3",
+      "KrishiSaathi for Bharat — live at liaa-ebon dot vercel dot app. Open source: krabhi seventy-five slash L-I-A-A. Thank you.",
+    audio: "/pitch-audio/09-close.mp3",
     visual: "close",
   },
 ];
@@ -187,12 +169,12 @@ export default function PitchPage() {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(b.narration);
       u.rate = 0.95;
-      u.pitch = 1.05;
+      u.pitch = 0.95;
       const voices = window.speechSynthesis.getVoices();
       const indian =
-        voices.find((v) => /en-IN|India|Neerja|Heera/i.test(`${v.lang} ${v.name}`)) ??
-        voices.find((v) => /en-GB.*Female|Google UK English Female/i.test(v.name)) ??
-        voices.find((v) => v.lang.startsWith("en") && /female|zira|samantha/i.test(v.name));
+        voices.find((v) => /en-IN|India|Ravi|Nikhil|Aashish|Gaurav|Raju/i.test(`${v.lang} ${v.name}`)) ??
+        voices.find((v) => /en-GB.*Male|Google UK English Male|David|Mark/i.test(v.name)) ??
+        voices.find((v) => v.lang.startsWith("en") && /male|david|mark|daniel/i.test(v.name));
       if (indian) u.voice = indian;
       speechRef.current = u;
       window.speechSynthesis.speak(u);

@@ -51,10 +51,10 @@ export function Shell({
         <Brand />
         <Link
           href="/crm#dialer"
-          className="mb-5 flex items-center justify-center gap-2 rounded-md bg-[#0176d3] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#014486]"
+          className="mb-5 flex items-center justify-center gap-2 rounded-md bg-[#2e844a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#226b3a]"
         >
-          <Icon name="add" />
-          New outbound
+          <Icon name="add" className="text-[18px] text-white" />
+          New Farmer
         </Link>
         <NavList pathname={pathname} />
       </aside>
@@ -69,6 +69,14 @@ export function Shell({
           />
           <aside className="relative z-10 flex h-full w-60 flex-col bg-[#032d60] px-3 py-5">
             <Brand />
+            <Link
+              href="/crm#dialer"
+              className="mb-5 flex items-center justify-center gap-2 rounded-md bg-[#2e844a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#226b3a]"
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="add" className="text-[18px] text-white" />
+              New Farmer
+            </Link>
             <NavList pathname={pathname} onClick={() => setOpen(false)} />
           </aside>
         </div>

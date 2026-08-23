@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const result = handleMcp(body, channel);
+  const result = await handleMcp(body, channel);
   return NextResponse.json(result);
 }
 

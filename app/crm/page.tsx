@@ -22,21 +22,36 @@ type Call = {
   contact?: { name: string } | null;
 };
 
+type AgriCase = {
+  id: string;
+  farmerName: string;
+  crop: string;
+  village: string;
+  district: string;
+  symptoms: string;
+  summary: string;
+  status: string;
+  escalateReason: string;
+};
+
 export default function CrmPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
+  const [cases, setCases] = useState<AgriCase[]>([]);
   const [error, setError] = useState("");
   const [dialing, setDialing] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
 
   const load = useCallback(async () => {
-    const [c, k] = await Promise.all([
+    const [c, k, a] = await Promise.all([
       fetch("/api/crm/contacts").then((r) => r.json()),
       fetch("/api/crm/calls").then((r) => r.json()),
+      fetch("/api/crm/cases").then((r) => r.json()),
     ]);
     setContacts(c.contacts ?? []);
     setCalls(k.calls ?? []);
+    setCases(a.cases ?? []);
   }, []);
 
   useEffect(() => {
@@ -101,12 +116,11 @@ export default function CrmPage() {
       </header>
 
       <main className="mx-auto mt-10 max-w-5xl">
-        <p className="nova-label">Vobiz telephony · CRM</p>
-        <h1 className="mt-2 text-3xl font-semibold">Call any number. Update disposition.</h1>
+        <p className="nova-label">Field CRM · Vobiz · expert desk</p>
+        <h1 className="mt-2 text-3xl font-semibold">Farmer cases. Call. Escalate.</h1>
         <p className="mt-2 max-w-xl text-sm text-[var(--ink-3)]">
-          Outbound from your Vobiz trial number. Liaa greets in Hinglish, then calendar /
-          meeting / inbox. Hangup writes disposition automatically. PUBLIC_BASE_URL must
-          be a Cloudflare HTTPS tunnel.
+          Cases open from the Agora desk or a Vobiz phone call. Hangup sets
+          disposition. PUBLIC_BASE_URL must be a public HTTPS tunnel.
         </p>
         {error ? <p className="nova-gate__err mt-4">{error}</p> : null}
 
@@ -138,7 +152,31 @@ export default function CrmPage() {
           </button>
         </form>
 
-        <section className="mt-10 grid gap-8 md:grid-cols-2">
+        <section className="mt-10 grid gap-8 md:grid-cols-3">
+          <div>
+            <h2 className="nova-label-hi">Field cases</h2>
+            {cases.length === 0 ? (
+              <p className="nova-empty mt-3">No cases yet. Talk on /demo or call a farmer.</p>
+            ) : (
+              cases.map((cs) => (
+                <article key={cs.id} className="nova-card mt-3">
+                  <div className="nova-card__head">
+                    <span className="nova-card__verb">{cs.status}</span>
+                    <span className="nova-card__kind">{cs.crop || "crop?"}</span>
+                  </div>
+                  <div className="nova-card__title">{cs.farmerName}</div>
+                  <div className="nova-card__detail">
+                    {[cs.village, cs.district, cs.symptoms || cs.summary]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                  {cs.escalateReason ? (
+                    <div className="nova-card__detail">Expert: {cs.escalateReason}</div>
+                  ) : null}
+                </article>
+              ))
+            )}
+          </div>
           <div>
             <h2 className="nova-label-hi">Contacts</h2>
             {contacts.length === 0 ? (

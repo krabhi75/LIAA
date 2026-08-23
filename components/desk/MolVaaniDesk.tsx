@@ -266,9 +266,8 @@ export function MolVaaniDesk({
         </div>
         {call.transcripts.length === 0 ? (
           <p className="nova-empty">
-            Nothing yet. Turn on the mic and speak in Hindi or Hinglish — ask about
-            your day, book a meeting, or read mail. Transcript appears here in
-            realtime.
+            Nothing yet. Speak Hindi or Hinglish about the crop. Liaa will ask follow-ups
+            before any advice.
           </p>
         ) : (
           call.transcripts.map((line, i) => (
@@ -327,15 +326,15 @@ export function MolVaaniDesk({
       <aside className="nova-log" ref={logRef as never}>
         <div className="nova-log__head">
           <div>
-            <div className="nova-label-hi">Actions · progress</div>
-            <span className="nova-label">linked tools</span>
+            <div className="nova-label-hi">Field actions</div>
+            <span className="nova-label">weather · case · expert</span>
           </div>
           <span className="nova-label">{cardsChrono.length || ""}</span>
         </div>
         {chains.length === 0 ? (
           <p className="nova-empty">
-            When Liaa chains several tools (read calendar → create meeting → draft
-            mail), progress shows here step by step. DEMO DATA badge = seeded demo.
+            When Liaa asks follow-ups, pulls live weather, opens a field case, or
+            escalates an expert, those steps show here.
           </p>
         ) : (
           chains.map((chain, chainIdx) => {

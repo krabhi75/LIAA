@@ -15,7 +15,7 @@ function err(id: JsonRpc["id"], code: number, message: string) {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
 }
 
-export function handleMcp(body: JsonRpc, channel: string): unknown {
+export async function handleMcp(body: JsonRpc, channel: string): Promise<unknown> {
   const method = body.method ?? "";
   const id = body.id ?? null;
 
@@ -48,7 +48,7 @@ export function handleMcp(body: JsonRpc, channel: string): unknown {
     if (!TOOL_NAMES.includes(name as (typeof TOOL_NAMES)[number])) {
       return err(id, -32601, `Unknown tool ${name}`);
     }
-    const result = runTool(channel, name, params.arguments ?? {});
+    const result = await runTool(channel, name, params.arguments ?? {});
     return ok(id, {
       content: [{ type: "text", text: JSON.stringify(result) }],
       structuredContent: result,

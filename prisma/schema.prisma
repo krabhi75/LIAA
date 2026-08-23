@@ -148,6 +148,27 @@ model CrmCall {
   @@index([disposition])
 }
 
+model AgriCase {
+  id              String   @id @default(cuid())
+  farmerName      String   @default("Farmer")
+  phone           String   @default("")
+  crop            String   @default("")
+  village         String   @default("")
+  district        String   @default("")
+  symptoms        String   @default("")
+  started         String   @default("")
+  watering        String   @default("")
+  summary         String   @default("")
+  status          String   @default("open")
+  escalateReason  String   @default("")
+  channel         String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([channel])
+}
+
 model UsageEvent {
   id        String       @id @default(cuid())
   orgId     String

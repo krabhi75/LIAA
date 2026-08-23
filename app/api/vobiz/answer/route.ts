@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const action = `${base}/api/vobiz/gather`;
   return xmlResponse(
     speakGatherXml(
-      "Namaste. This is Liaa. Boliyega calendar, meeting book karo, ya inbox. Kehne ke baad rukiye.",
+      "Namaste. Main Liaa, kheti sahayak. Kaun si fasal hai aur kya dikh raha hai?",
       action,
     ),
   );

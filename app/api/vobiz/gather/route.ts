@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const params = await parseVobizBody(req);
   const uuid = params.CallUUID || params.RequestUUID || "phone";
   const speech = (params.Speech || params.Digits || "").trim();
-  const turn = handlePhoneSpeech(uuid, speech);
+  const turn = await handlePhoneSpeech(uuid, speech);
   const existing = await prisma.crmCall.findFirst({ where: { vobizUuid: uuid } });
   if (existing) {
     const line = speech ? `YOU: ${speech}\nLIAA: ${turn.speak}` : `LIAA: ${turn.speak}`;

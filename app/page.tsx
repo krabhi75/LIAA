@@ -16,26 +16,18 @@ export default function LandingPage() {
 
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-20">
         <p className="nova-label" style={{ color: "var(--nova)" }}>
-          Agora Conversational AI
+          PS1 · Agriculture & rural · Agora Conversational AI
         </p>
         <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-tight text-[var(--ink)]">
-          Speaks, listens, acts.
+          Voice for the field. Cases for the expert.
         </h1>
         <p
           className="mt-4 max-w-xl text-lg text-[var(--ink-3)]"
           style={{ lineHeight: 1.6 }}
         >
-          Liaa — your voice assistant for calendar, mail, tabs, and memory. Not a
-          sales rep. Layout inspired by{" "}
-          <a
-            href="https://github.com/vaivikop/nova-agora"
-            className="text-[var(--nova)]"
-            target="_blank"
-            rel="noreferrer"
-          >
-            nova-agora
-          </a>
-          ; voice on Agora Conversational AI.
+          Liaa talks to farmers in Hindi and Hinglish, asks follow-ups, pulls live
+          weather, opens a structured case, and escalates a human expert — so the
+          farmer never repeats the story.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/demo" className="nova-btn nova-btn--primary">
@@ -49,16 +41,16 @@ export default function LandingPage() {
         <section className="mt-20 grid gap-8 md:grid-cols-3">
           {[
             {
-              title: "Instrument UI",
-              body: "Transcript · orb · action cards. Live Agora channel and RTT under the orb.",
+              title: "Ask, don’t guess",
+              body: "Follow-ups for crop, village, symptoms, watering. Uncertainty is spoken out loud.",
             },
             {
-              title: "Tools that land",
-              body: "get_calendar, create_event, read_email, draft/send, open_tab, remember — with DEMO DATA badges when seeded.",
+              title: "Live weather + case",
+              body: "Open-Meteo API, structured CRM case, expert escalation — visible on screen.",
             },
             {
-              title: "Not sales",
-              body: "No lead qualification pitch. Liaa is a personal assistant that does things.",
+              title: "Phone + desk",
+              body: "Agora desk for judges. Vobiz call so a farmer can talk from a feature phone.",
             },
           ].map((item) => (
             <div key={item.title}>

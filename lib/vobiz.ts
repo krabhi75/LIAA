@@ -13,7 +13,7 @@ export function vobizXml(inner: string): string {
 export function speakGatherXml(prompt: string, actionUrl: string): string {
   const speak = `<Speak voice="WOMAN" language="en-IN">${xmlEscape(prompt)}</Speak>`;
   return vobizXml(
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="hi-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="12" hints="calendar,meeting,mail,inbox,bye,alvida">${speak}</Gather><Speak language="en-IN">I did not hear you. Goodbye.</Speak><Hangup/>`,
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="hi-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="12" hints="fasal,patte,keeda,gehun,gaon,paani,expert">${speak}</Gather><Speak language="en-IN">I did not hear you. Goodbye.</Speak><Hangup/>`,
   );
 }
 

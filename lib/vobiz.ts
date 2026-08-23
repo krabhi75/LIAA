@@ -11,16 +11,16 @@ export function vobizXml(inner: string): string {
 }
 
 export function speakGatherXml(prompt: string, actionUrl: string): string {
-  const speak = `<Speak voice="WOMAN" language="en-US">${xmlEscape(prompt)}</Speak>`;
+  const speak = `<Speak voice="WOMAN" language="hi-IN">${xmlEscape(prompt)}</Speak>`;
   const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
   return vobizXml(
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="en-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="15">${speak}</Gather><Speak voice="WOMAN" language="en-US">Sorry, I did not hear you.</Speak><Redirect>${xmlEscape(answerUrl)}</Redirect>`,
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="hi-IN" speechModel="phone_call" speechEndTimeout="auto" executionTimeout="20" hints="fasal,gehun,kapas,dhan,keeda,paani,gaon,theek,haan,nahi">${speak}</Gather><Speak voice="WOMAN" language="hi-IN">Sunai nahi diya. Fasal ka naam Hindi ya English mein boliye.</Speak><Redirect>${xmlEscape(answerUrl)}</Redirect>`,
   );
 }
 
 export function hangupXml(message: string): string {
   return vobizXml(
-    `<Speak voice="WOMAN" language="en-US">${xmlEscape(message)}</Speak><Hangup/>`,
+    `<Speak voice="WOMAN" language="hi-IN">${xmlEscape(message)}</Speak><Hangup/>`,
   );
 }
 

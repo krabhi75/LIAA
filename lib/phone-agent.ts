@@ -12,12 +12,12 @@ export async function handlePhoneSpeech(
   const t = speech.trim().toLowerCase();
   if (!t) {
     return {
-      speak: "Sunai nahi diya. Fasal ka naam boliye.",
+      speak: "Sunai nahi diya. Fasal ka naam Hindi ya English mein boliye.",
       hangup: false,
     };
   }
-  if (/\b(bye|goodbye|alvida|band karo)\b/.test(t)) {
-    return { speak: "Theek hai. Case screen par hai. Expert dekh lenge.", hangup: true };
+  if (/\b(bye|goodbye|alvida|band karo|bas|theek hai band)\b/.test(t)) {
+    return { speak: "Theek hai. Case screen par hai. Expert dekh lenge. Ram ram.", hangup: true };
   }
 
   await runTool(channel, "capture_field", {

@@ -8,6 +8,9 @@ export type StoredContact = {
   name: string;
   phone: string;
   company: string;
+  village: string;
+  district: string;
+  crop: string;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -59,7 +62,13 @@ function readDisk(): Bag {
     if (!existsSync(p)) return empty();
     const parsed = JSON.parse(readFileSync(p, "utf8")) as Bag;
     return {
-      contacts: parsed.contacts ?? [],
+      contacts: (parsed.contacts ?? []).map((c) =>
+        serializeContact({
+          ...c,
+          company: c.company ?? "",
+          notes: c.notes ?? "",
+        }),
+      ),
       calls: parsed.calls ?? [],
     };
   } catch {
@@ -91,6 +100,33 @@ function nid(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function serializeContact(c: {
+  id: string;
+  name: string;
+  phone: string;
+  company: string;
+  village?: string;
+  district?: string;
+  crop?: string;
+  notes: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}): StoredContact {
+  const village = c.village || c.company || "";
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone,
+    company: c.company,
+    village,
+    district: c.district || "",
+    crop: c.crop || "",
+    notes: c.notes,
+    createdAt: typeof c.createdAt === "string" ? c.createdAt : c.createdAt.toISOString(),
+    updatedAt: typeof c.updatedAt === "string" ? c.updatedAt : c.updatedAt.toISOString(),
+  };
+}
+
 export async function listContacts(): Promise<
   (StoredContact & { calls: StoredCall[] })[]
 > {
@@ -101,13 +137,7 @@ export async function listContacts(): Promise<
         include: { calls: { orderBy: { startedAt: "desc" }, take: 3 } },
       });
       return rows.map((c) => ({
-        id: c.id,
-        name: c.name,
-        phone: c.phone,
-        company: c.company,
-        notes: c.notes,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
+        ...serializeContact(c),
         calls: c.calls.map(serializePrismaCall),
       }));
     } catch (e) {
@@ -135,17 +165,14 @@ export async function createContact(input: {
   if (prismaOk()) {
     try {
       const c = await prisma.crmContact.create({
-        data: { name: input.name, phone, company: input.company ?? "" },
+        data: {
+          name: input.name,
+          phone,
+          company: input.company ?? "",
+          village: input.company ?? "",
+        },
       });
-      return {
-        id: c.id,
-        name: c.name,
-        phone: c.phone,
-        company: c.company,
-        notes: c.notes,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-      };
+      return serializeContact(c);
     } catch (e) {
       logPrisma("prisma", e);
     }
@@ -155,6 +182,9 @@ export async function createContact(input: {
     name: input.name,
     phone,
     company: input.company ?? "",
+    village: input.company ?? "",
+    district: "",
+    crop: "",
     notes: "",
     createdAt: nowIso(),
     updatedAt: nowIso(),
@@ -180,15 +210,7 @@ export async function upsertContactByPhone(input: {
           where: { id: existing.id },
           data: { name },
         });
-        return {
-          id: c.id,
-          name: c.name,
-          phone: c.phone,
-          company: c.company,
-          notes: c.notes,
-          createdAt: c.createdAt.toISOString(),
-          updatedAt: c.updatedAt.toISOString(),
-        };
+        return serializeContact(c);
       }
       return createContact({ name: input.name || "Farmer", phone });
     } catch (e) {
@@ -210,17 +232,7 @@ export async function findContact(id: string): Promise<StoredContact | null> {
   if (prismaOk()) {
     try {
       const c = await prisma.crmContact.findUnique({ where: { id } });
-      if (c) {
-        return {
-          id: c.id,
-          name: c.name,
-          phone: c.phone,
-          company: c.company,
-          notes: c.notes,
-          createdAt: c.createdAt.toISOString(),
-          updatedAt: c.updatedAt.toISOString(),
-        };
-      }
+      if (c) return serializeContact(c);
     } catch (e) {
       logPrisma("prisma", e);
     }
@@ -234,17 +246,7 @@ export async function findContactByPhone(phoneRaw: string): Promise<StoredContac
   if (prismaOk()) {
     try {
       const c = await prisma.crmContact.findFirst({ where: { phone } });
-      if (c) {
-        return {
-          id: c.id,
-          name: c.name,
-          phone: c.phone,
-          company: c.company,
-          notes: c.notes,
-          createdAt: c.createdAt.toISOString(),
-          updatedAt: c.updatedAt.toISOString(),
-        };
-      }
+      if (c) return serializeContact(c);
     } catch (e) {
       logPrisma("prisma", e);
     }
@@ -268,15 +270,7 @@ export async function appendContactNote(
           notes: existing.notes ? `${existing.notes}\n${line}` : line,
         },
       });
-      return {
-        id: c.id,
-        name: c.name,
-        phone: c.phone,
-        company: c.company,
-        notes: c.notes,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-      };
+      return serializeContact(c);
     } catch (e) {
       logPrisma("prisma", e);
     }
@@ -285,6 +279,56 @@ export async function appendContactNote(
   const row = bag.contacts.find((c) => c.id === id);
   if (!row) return null;
   row.notes = row.notes ? `${row.notes}\n${line}` : line;
+  row.updatedAt = nowIso();
+  persist(bag);
+  return row;
+}
+
+export async function updateContact(
+  id: string,
+  data: {
+    name?: string;
+    phone?: string;
+    village?: string;
+    district?: string;
+    crop?: string;
+    company?: string;
+  },
+): Promise<StoredContact | null> {
+  const phone = data.phone ? normalizePhone(data.phone) : undefined;
+  const village = data.village?.trim();
+  const district = data.district?.trim();
+  const crop = data.crop?.trim();
+  const company = data.company?.trim() ?? village;
+  if (prismaOk()) {
+    try {
+      const existing = await prisma.crmContact.findUnique({ where: { id } });
+      if (!existing) return null;
+      const c = await prisma.crmContact.update({
+        where: { id },
+        data: {
+          name: data.name?.trim() || existing.name,
+          phone: phone || existing.phone,
+          village: village ?? existing.village,
+          district: district ?? existing.district,
+          crop: crop ?? existing.crop,
+          company: company || existing.company,
+        },
+      });
+      return serializeContact(c);
+    } catch (e) {
+      logPrisma("updateContact", e);
+    }
+  }
+  const bag = mem();
+  const row = bag.contacts.find((c) => c.id === id);
+  if (!row) return null;
+  if (data.name?.trim()) row.name = data.name.trim();
+  if (phone) row.phone = phone;
+  if (village != null) row.village = village;
+  if (district != null) row.district = district;
+  if (crop != null) row.crop = crop;
+  if (company) row.company = company;
   row.updatedAt = nowIso();
   persist(bag);
   return row;
@@ -316,6 +360,32 @@ export async function listCalls(): Promise<
       const c = bag.contacts.find((x) => x.id === k.contactId);
       return { ...k, contact: c ? { name: c.name, id: c.id } : null };
     });
+}
+
+export async function listCallsForFarmer(
+  farmerId: string,
+  phone: string,
+): Promise<StoredCall[]> {
+  const digits = normalizePhone(phone);
+  if (prismaOk()) {
+    try {
+      const rows = await prisma.crmCall.findMany({
+        where: {
+          OR: [
+            { contactId: farmerId },
+            ...(digits ? [{ phone: digits }] : []),
+          ],
+        },
+        orderBy: { startedAt: "desc" },
+      });
+      return rows.map(serializePrismaCall);
+    } catch (e) {
+      logPrisma("listCallsForFarmer", e);
+    }
+  }
+  return mem()
+    .calls.filter((k) => k.contactId === farmerId || (digits && k.phone === digits))
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
 export async function createCall(input: {

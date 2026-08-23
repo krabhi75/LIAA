@@ -11,7 +11,7 @@ function answerXml(req: Request): Response {
   const action = `${voicePublicBase(req)}/api/vobiz/gather`;
   return xmlResponse(
     speakGatherXml(
-      "Namaste. This is Liaa, your farm helper. Please say your crop and what you are seeing on the plants.",
+      "Namaste, main Liaa hoon, aapki kheti sahayika. Fasal ka naam aur ped par kya dikh raha hai, Hindi, Hinglish, ya English mein boliye.",
       action,
     ),
   );

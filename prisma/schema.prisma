@@ -121,6 +121,9 @@ model CrmContact {
   name      String
   phone     String
   company   String    @default("")
+  village   String    @default("")
+  district  String    @default("")
+  crop      String    @default("")
   notes     String    @default("")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

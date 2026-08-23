@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     console.error("[vobiz/gather]", err);
     return xmlResponse(
       speakGatherXml(
-        "Sorry, please say that again. Which crop, and what is wrong?",
+        "Sunai nahi diya. Fasal ka naam Hindi, Hinglish, ya English mein boliye.",
         action,
       ),
     );

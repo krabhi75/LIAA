@@ -3,6 +3,9 @@ export type Contact = {
   name: string;
   phone: string;
   company: string;
+  village?: string;
+  district?: string;
+  crop?: string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;

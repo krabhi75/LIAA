@@ -2,7 +2,7 @@ import { listAgriCases, type AgriCaseRow } from "./agri-cases";
 import {
   findContact,
   findContactByPhone,
-  listCalls,
+  listCallsForFarmer,
   type StoredCall,
   type StoredContact,
 } from "./crm-store";
@@ -11,7 +11,7 @@ import { normalizePhone } from "./vobiz";
 export type TimelineItem = {
   id: string;
   at: string;
-  kind: "call" | "case" | "note";
+  kind: "call" | "case" | "note" | "profile";
   direction?: string;
   title: string;
   detail: string;
@@ -54,22 +54,26 @@ function noteEvents(notes: string): TimelineItem[] {
 export async function loadFarmerProfile(id: string): Promise<FarmerProfile | null> {
   const farmer = await findContact(id);
   if (!farmer) return null;
-  const allCalls = await listCalls();
-  const calls = allCalls.filter(
-    (k) => k.contactId === farmer.id || samePhone(k.phone, farmer.phone),
-  );
+  const calls = await listCallsForFarmer(farmer.id, farmer.phone);
   const cases = (await listAgriCases()).filter((cs) =>
     samePhone(cs.phone, farmer.phone),
   );
   const timeline: TimelineItem[] = [
+    {
+      id: `profile-${farmer.id}`,
+      at: farmer.createdAt,
+      kind: "profile" as const,
+      title: "Farmer added to CRM",
+      detail: [farmer.phone, farmer.village, farmer.crop].filter(Boolean).join(" · "),
+    },
     ...calls.map((k) => ({
       id: k.id,
       at: k.startedAt,
       kind: "call" as const,
       direction: k.direction,
       title: `${k.direction === "inbound" ? "Inbound" : "Outbound"} call`,
-      detail: `${k.status} · ${k.disposition}${k.hangupCause ? ` · ${k.hangupCause}` : ""}`,
-      transcript: k.transcript || k.lastSpeech,
+      detail: [k.status, k.disposition, k.hangupCause].filter(Boolean).join(" · "),
+      transcript: [k.transcript, k.lastSpeech].filter(Boolean).join("\n"),
       status: k.status,
     })),
     ...cases.map((cs) => ({
@@ -78,7 +82,9 @@ export async function loadFarmerProfile(id: string): Promise<FarmerProfile | nul
       kind: "case" as const,
       direction: cs.direction,
       title: `Case · ${cs.crop || "crop"} · ${cs.status}`,
-      detail: [cs.village, cs.symptoms || cs.summary].filter(Boolean).join(" · "),
+      detail: [cs.village, cs.district, cs.symptoms || cs.summary]
+        .filter(Boolean)
+        .join(" · "),
       transcript: cs.transcript,
       status: cs.status,
     })),

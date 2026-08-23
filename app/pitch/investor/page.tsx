@@ -31,6 +31,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "Welcome to KrishiSaathi — voice-first agricultural support built for Bharat.",
     visual: "hero",
+    broll: "/?embed=1",
   },
   {
     id: "02-problem",
@@ -43,6 +44,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "Most farmers cannot navigate digital apps. They need voice help without repeating their story.",
     visual: "hero",
+    broll: "/?embed=1",
   },
   {
     id: "03-stack",
@@ -55,6 +57,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "Deepgram understands Hindi. OpenAI reasons. ElevenLabs speaks. Agora owns the live channel.",
     visual: "stack",
+    broll: "/?embed=1",
   },
   {
     id: "04-desk",
@@ -67,7 +70,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "On the voice desk, tool cards appear as KrishiSaathi works in real time.",
     visual: "desk",
-    broll: "/demo",
+    broll: "/demo?embed=1",
   },
   {
     id: "05-dashboard",
@@ -84,7 +87,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "Operations dashboard — call mix donut, top farmer issues, and crop focus from live CRM.",
     visual: "dashboard",
-    broll: "/",
+    broll: "/?embed=1",
   },
   {
     id: "06-crm",
@@ -97,7 +100,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "In the field CRM, click New Farmer, search the registry, and place outbound calls.",
     visual: "crm",
-    broll: "/crm",
+    broll: "/crm?embed=1",
   },
   {
     id: "07-profile",
@@ -110,7 +113,7 @@ const BEATS: InvestorBeat[] = [
     caption:
       "Each farmer profile shows timeline, weather, transcripts, and agri cases with disposition.",
     visual: "profile",
-    broll: "/crm",
+    broll: "/crm?embed=1",
   },
   {
     id: "08-live",
@@ -123,25 +126,22 @@ const BEATS: InvestorBeat[] = [
     caption:
       "Live calls refresh every few seconds. CRM dials run on Vobiz with an Indian voice.",
     visual: "live",
-    broll: "/crm/calls",
+    broll: "/crm/calls?embed=1",
   },
 ];
-
-const ORIGIN =
-  typeof window !== "undefined"
-    ? window.location.origin
-    : "https://liaa-ebon.vercel.app";
 
 export default function InvestorPitchPage() {
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [farmerBroll, setFarmerBroll] = useState<string | null>(null);
   const [recordMode, setRecordMode] = useState(false);
+  const [origin, setOrigin] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number>(0);
   const autoplayRef = useRef(false);
 
   useEffect(() => {
+    setOrigin(window.location.origin);
     const params = new URLSearchParams(window.location.search);
     setRecordMode(params.get("record") === "1");
     autoplayRef.current = params.get("autoplay") === "1";
@@ -152,7 +152,7 @@ export default function InvestorPitchPage() {
       .then((r) => r.json())
       .then((data: { contacts?: { id: string }[] }) => {
         const id = data.contacts?.[0]?.id;
-        if (id) setFarmerBroll(`/crm/farmers/${id}`);
+        if (id) setFarmerBroll(`/crm/farmers/${id}?embed=1`);
       })
       .catch(() => undefined);
   }, []);
@@ -168,6 +168,18 @@ export default function InvestorPitchPage() {
     if (beat.visual === "profile" && farmerBroll) return farmerBroll;
     return beat.broll ?? null;
   }, [beat, farmerBroll]);
+
+  /** Keep product screens warm so dashboard is ready when its beat hits */
+  const preloadScreens = useMemo(() => {
+    const paths = [
+      "/?embed=1",
+      "/demo?embed=1",
+      "/crm?embed=1",
+      "/crm/calls?embed=1",
+    ];
+    if (farmerBroll) paths.push(farmerBroll);
+    return [...new Set(paths)];
+  }, [farmerBroll]);
 
   const progress = Math.min(1, elapsed / TOTAL_SEC);
 
@@ -192,14 +204,41 @@ export default function InvestorPitchPage() {
       setPlaying(true);
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(tick);
-    } catch {
-      /* autoplay blocked — user must click */
+    } catch (err) {
+      console.warn("pitch play failed", err);
     }
   }, [tick]);
 
   useEffect(() => {
+    (window as Window & {
+      __pitchStart?: () => Promise<void> | void;
+      __pitchSeek?: (t: number) => void;
+    }).__pitchStart = () => startPlayback();
+    (
+      window as Window & {
+        __pitchSeek?: (t: number) => void;
+      }
+    ).__pitchSeek = (t: number) => {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = t;
+        audio.pause();
+      }
+      setElapsed(t);
+      setPlaying(false);
+      cancelAnimationFrame(rafRef.current);
+    };
+    return () => {
+      delete (window as Window & { __pitchStart?: () => Promise<void> | void })
+        .__pitchStart;
+      delete (window as Window & { __pitchSeek?: (t: number) => void }).__pitchSeek;
+    };
+  }, [startPlayback]);
+
+  useEffect(() => {
     if (!autoplayRef.current) return;
-    const t = window.setTimeout(() => void startPlayback(), 1200);
+    /* Wait for CRM iframes (esp. dashboard) to hydrate before audio starts */
+    const t = window.setTimeout(() => void startPlayback(), 6500);
     return () => window.clearTimeout(t);
   }, [startPlayback]);
 
@@ -250,23 +289,33 @@ export default function InvestorPitchPage() {
               <span className="inv__dot" />
               <span className="inv__dot" />
               <span className="inv__url">
-                liaa-ebon.vercel.app{brollSrc ?? ""}
+                liaa-ebon.vercel.app
+                {(brollSrc ?? "").replace(/\?embed=1$/, "") || ""}
               </span>
             </div>
-            {brollSrc ? (
-              <iframe
-                key={brollSrc}
-                title="Product screen"
-                className="inv__iframe"
-                src={`${ORIGIN}${brollSrc}`}
-                loading="eager"
-              />
-            ) : (
-              <div className="inv__placeholder">
-                <p className="inv__ph-title">{beat.title}</p>
-                <p className="inv__ph-sub">{beat.caption}</p>
-              </div>
-            )}
+            <div className="inv__iframe-stack">
+              {origin
+                ? preloadScreens.map((path) => {
+                    const active = brollSrc === path;
+                    return (
+                      <iframe
+                        key={path}
+                        title={path}
+                        className={`inv__iframe ${active ? "inv__iframe--active" : ""}`}
+                        src={`${origin}${path}`}
+                        loading="eager"
+                        aria-hidden={!active}
+                      />
+                    );
+                  })
+                : null}
+              {!brollSrc ? (
+                <div className="inv__placeholder">
+                  <p className="inv__ph-title">{beat.title}</p>
+                  <p className="inv__ph-sub">{beat.caption}</p>
+                </div>
+              ) : null}
+            </div>
           </aside>
         </div>
 
@@ -468,6 +517,32 @@ export default function InvestorPitchPage() {
           border: none;
           background: #fff;
           min-height: 360px;
+        }
+        .inv__iframe-stack {
+          position: relative;
+          flex: 1;
+          min-height: 420px;
+          background: #f4f6f9;
+        }
+        .inv__iframe-stack .inv__iframe {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          min-height: 0;
+          opacity: 0;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .inv__iframe-stack .inv__iframe--active {
+          opacity: 1;
+          pointer-events: auto;
+          z-index: 2;
+        }
+        .inv__iframe-stack .inv__placeholder {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
         }
         .inv__placeholder {
           flex: 1;

@@ -12,7 +12,7 @@ const root = join(__dir, "..");
 const outDir = join(root, "public", "pitch-video");
 const audioPath = join(root, "public", "pitch-audio", "investor-recording.m4a");
 const baseUrl = process.env.PITCH_URL || "http://localhost:3000";
-const recordUrl = `${baseUrl}/pitch/investor?record=1&autoplay=1`;
+const recordUrl = `${baseUrl}/pitch/investor?record=1`;
 
 async function main() {
   if (!existsSync(audioPath)) {
@@ -40,7 +40,10 @@ async function main() {
   }
 
   console.log(`Recording ${recordUrl} …`);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--autoplay-policy=no-user-gesture-required"],
+  });
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
     recordVideo: {
@@ -49,7 +52,39 @@ async function main() {
     },
   });
   const page = await context.newPage();
-  await page.goto(recordUrl, { waitUntil: "networkidle", timeout: 120_000 });
+  await page.goto(recordUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+
+  /* Warm CRM iframes (dashboard Call mix) before starting narration */
+  await page.waitForTimeout(8_000);
+  await page.waitForFunction(
+    () => typeof window.__pitchStart === "function",
+    null,
+    { timeout: 20_000 },
+  );
+
+  const started = await page.evaluate(async () => {
+    const start = window.__pitchStart;
+    if (!start) return { ok: false, reason: "no __pitchStart" };
+    await start();
+    const audio = document.querySelector("audio");
+    return {
+      ok: Boolean(audio && !audio.paused),
+      currentTime: audio?.currentTime ?? -1,
+      paused: audio?.paused ?? true,
+    };
+  });
+  console.log("Playback start:", started);
+  if (!started.ok) {
+    throw new Error(
+      `Pitch audio did not start — slides would stay frozen (${JSON.stringify(started)})`,
+    );
+  }
+
+  /* Confirm dashboard iframe is in DOM before its beat */
+  await page.waitForSelector('iframe[src*="embed=1"]', { timeout: 15_000 }).catch(() => {
+    console.warn("embed iframes not found yet");
+  });
+
   await page.waitForTimeout(118_000);
   await context.close();
   await browser.close();

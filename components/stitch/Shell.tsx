@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 
 const NAV_SECTIONS = [
@@ -42,8 +42,63 @@ export function Shell({
   title: string;
   children: ReactNode;
 }) {
+  return (
+    <Suspense fallback={<ShellChrome title={title}>{children}</ShellChrome>}>
+      <ShellWithEmbed title={title}>{children}</ShellWithEmbed>
+    </Suspense>
+  );
+}
+
+function ShellWithEmbed({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  const searchParams = useSearchParams();
+  const embed = searchParams.get("embed") === "1";
+  return (
+    <ShellChrome title={title} embed={embed}>
+      {children}
+    </ShellChrome>
+  );
+}
+
+function ShellChrome({
+  title,
+  children,
+  embed = false,
+}: {
+  title: string;
+  children: ReactNode;
+  embed?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  /* Investor pitch iframes: full-bleed content, no nested sidebar */
+  if (embed) {
+    return (
+      <div className="ks-body min-h-screen bg-ks-surface">
+        <header className="flex h-11 items-center justify-between border-b border-ks-outline px-4">
+          <div className="flex items-center gap-2">
+            <span className="ks-display text-sm font-bold text-ks-on-surface">
+              KrishiSaathi
+            </span>
+            <span className="text-ks-muted">·</span>
+            <span className="text-sm font-semibold text-ks-primary">{title}</span>
+          </div>
+          <span className="rounded-full bg-[#2e844a]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#2e844a]">
+            Live
+          </span>
+        </header>
+        <main className="px-3 pb-8 pt-3">
+          <div className="mx-auto max-w-[1440px]">{children}</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="ks-body min-h-screen">

@@ -29,15 +29,24 @@ export function xmlResponse(xml: string): Response {
   });
 }
 
+function envOr(key: string, fallback = ""): string {
+  const value = process.env[key]?.trim();
+  return value || fallback;
+}
+
 export function vobizConfig() {
-  const authId = process.env.VOBIZ_AUTH_ID ?? "";
-  const token = process.env.VOBIZ_AUTH_TOKEN ?? "";
-  const from = process.env.VOBIZ_FROM_NUMBER ?? "+917971443138";
-  const sipDomain = process.env.VOBIZ_SIP_DOMAIN ?? "a4dc1a99.sip.vobiz.ai";
-  const outboundTrunkId =
-    process.env.VOBIZ_OUTBOUND_TRUNK_ID ?? "a4dc1a99-2efa-4f52-b481-5dfd99aca03d";
-  const inboundTrunkId =
-    process.env.VOBIZ_INBOUND_TRUNK_ID ?? "c56b68cd-591f-4196-92df-e9e7a34aae9b";
+  const authId = envOr("VOBIZ_AUTH_ID");
+  const token = envOr("VOBIZ_AUTH_TOKEN");
+  const from = envOr("VOBIZ_FROM_NUMBER", "+917971443138");
+  const sipDomain = envOr("VOBIZ_SIP_DOMAIN", "a4dc1a99.sip.vobiz.ai");
+  const outboundTrunkId = envOr(
+    "VOBIZ_OUTBOUND_TRUNK_ID",
+    "a4dc1a99-2efa-4f52-b481-5dfd99aca03d",
+  );
+  const inboundTrunkId = envOr(
+    "VOBIZ_INBOUND_TRUNK_ID",
+    "c56b68cd-591f-4196-92df-e9e7a34aae9b",
+  );
   return { authId, token, from, sipDomain, outboundTrunkId, inboundTrunkId };
 }
 

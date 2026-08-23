@@ -14,9 +14,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const agoraAppId = appId();
+    const certificate = appCertificate();
     const rtcToken = RtcTokenBuilder.buildTokenWithUid(
-      appId(),
-      appCertificate(),
+      agoraAppId,
+      certificate,
       channel,
       uid,
       RtcRole.PUBLISHER,
@@ -24,13 +26,14 @@ export async function POST(req: NextRequest) {
       TOKEN_TTL_SECONDS,
     );
     const rtmToken = RtmTokenBuilder.buildToken(
-      appId(),
-      appCertificate(),
+      agoraAppId,
+      certificate,
       String(uid),
       TOKEN_TTL_SECONDS,
     );
 
     return NextResponse.json({
+      appId: agoraAppId,
       rtcToken,
       rtmToken,
       expireAt: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,

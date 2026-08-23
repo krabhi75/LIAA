@@ -13,6 +13,7 @@ async function post<T>(path: string, body: object): Promise<T> {
 }
 
 export type TokenResponse = {
+  appId: string;
   rtcToken: string;
   rtmToken: string;
   expireAt: number;

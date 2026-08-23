@@ -34,26 +34,60 @@ export async function POST(req: NextRequest) {
 
     await loadMemories();
 
-    const sessionUser = await getSession();
     let orgId: string | undefined;
-    let config = agentConfigId
-      ? await prisma.agentConfig.findUnique({ where: { id: agentConfigId } })
-      : null;
+    let config: {
+      id: string;
+      workspaceId?: string;
+      llmModel: string;
+      failureMessage: string;
+      mcpKey: string;
+      sttModel: string;
+      ttsModel: string;
+      ttsVoiceId: string;
+      idleTimeout: number;
+    } | null = null;
 
-    if (!config && sessionUser) {
-      config = await getDefaultAgentForOrg(sessionUser.orgId);
-      orgId = sessionUser.orgId;
+    try {
+      const sessionUser = await getSession();
+      config = agentConfigId
+        ? await prisma.agentConfig.findUnique({ where: { id: agentConfigId } })
+        : null;
+
+      if (!config && sessionUser) {
+        config = await getDefaultAgentForOrg(sessionUser.orgId);
+        orgId = sessionUser.orgId;
+      }
+
+      if (!config) {
+        const demo = await ensureDemoTenant();
+        config = demo.agent;
+        orgId = demo.org.id;
+      } else if (!orgId) {
+        if (config.workspaceId) {
+          const ws = await prisma.workspace.findUnique({
+            where: { id: config.workspaceId },
+          });
+          orgId = ws?.orgId;
+        }
+      }
+    } catch (err) {
+      console.error("[invite-agent] database unavailable; using demo agent", err);
     }
 
     if (!config) {
-      const demo = await ensureDemoTenant();
-      config = demo.agent;
-      orgId = demo.org.id;
-    } else if (!orgId) {
-      const ws = await prisma.workspace.findUnique({
-        where: { id: config.workspaceId },
-      });
-      orgId = ws?.orgId;
+      config = {
+        id: "liaa-demo",
+        llmModel: "gpt-4o-mini",
+        failureMessage: FAILURE_MESSAGE,
+        mcpKey: mcpKey(),
+        sttModel: "nova-3",
+        ttsModel: "speech-2.6-turbo",
+        ttsVoiceId:
+          process.env.LIAA_TTS_VOICE ||
+          process.env.NOVA_TTS_VOICE ||
+          "English_captivating_female1",
+        idleTimeout: 180,
+      };
     }
 
     bindSessionMeta(channel, {

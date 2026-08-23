@@ -7,15 +7,38 @@ const AREA_MAP: Record<string, AgoraArea> = {
   CN: Area.CN,
 };
 
+function firstNonEmpty(...keys: string[]): string {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+export function envPresent(...keys: string[]): boolean {
+  return Boolean(firstNonEmpty(...keys));
+}
+
 export function appId(): string {
-  const value = process.env.NEXT_PUBLIC_AGORA_APP_ID;
-  if (!value) throw new Error("NEXT_PUBLIC_AGORA_APP_ID is missing");
+  const value = firstNonEmpty("NEXT_PUBLIC_AGORA_APP_ID", "AGORA_APP_ID");
+  if (!value) {
+    throw new Error(
+      "Agora App ID is missing. Set NEXT_PUBLIC_AGORA_APP_ID (or AGORA_APP_ID) on the host and redeploy.",
+    );
+  }
   return value;
 }
 
 export function appCertificate(): string {
-  const value = process.env.NEXT_AGORA_APP_CERTIFICATE;
-  if (!value) throw new Error("NEXT_AGORA_APP_CERTIFICATE is missing");
+  const value = firstNonEmpty(
+    "NEXT_AGORA_APP_CERTIFICATE",
+    "AGORA_APP_CERTIFICATE",
+  );
+  if (!value) {
+    throw new Error(
+      "Agora App Certificate is missing. Set NEXT_AGORA_APP_CERTIFICATE (or AGORA_APP_CERTIFICATE) on the host and redeploy.",
+    );
+  }
   return value;
 }
 
@@ -33,7 +56,7 @@ export function agoraClient(): AgoraClient {
 }
 
 export function publicBaseUrl(req?: Request): string | null {
-  const configured = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "");
+  const configured = firstNonEmpty("PUBLIC_BASE_URL").replace(/\/$/, "");
   if (configured) return configured;
   const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL?.replace(/\/$/, "");
   if (prod) return prod.startsWith("http") ? prod : `https://${prod}`;

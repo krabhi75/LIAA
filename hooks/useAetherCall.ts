@@ -189,9 +189,12 @@ export function useAetherCall(
         throw new Error("Agora Signaling SDK did not export RTMClient");
       }
 
-      const { rtcToken, rtmToken } = await api.token(channel, uid);
-      const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
-      if (!appId) throw new Error("NEXT_PUBLIC_AGORA_APP_ID is not set");
+      const { appId, rtcToken, rtmToken } = await api.token(channel, uid);
+      if (!appId) {
+        throw new Error(
+          "Agora App ID missing from /api/token. Set NEXT_PUBLIC_AGORA_APP_ID or AGORA_APP_ID on the host and redeploy.",
+        );
+      }
 
       const rtcSdk = AgoraRTC as typeof AgoraRTC & {
         setParameter?: (key: string, value: unknown) => void;

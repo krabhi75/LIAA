@@ -345,6 +345,9 @@ export async function runTool(
         watering: s.watering,
         summary: String(args.summary || s.symptoms),
         channel,
+        transcript: "",
+        direction: "desk",
+        source: "agora-desk",
       });
       s.caseId = created.id;
       output = {

@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { normalizePhone } from "@/lib/vobiz";
+import { createContact, listContacts } from "@/lib/crm-store";
 
 export async function GET() {
-  const contacts = await prisma.crmContact.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: { calls: { orderBy: { startedAt: "desc" }, take: 3 } },
-  });
+  const contacts = await listContacts();
   return NextResponse.json({ contacts });
 }
 
@@ -19,12 +15,10 @@ export async function POST(req: Request) {
   if (!body.name || !body.phone) {
     return NextResponse.json({ error: "name and phone required" }, { status: 400 });
   }
-  const contact = await prisma.crmContact.create({
-    data: {
-      name: body.name,
-      phone: normalizePhone(body.phone),
-      company: body.company ?? "",
-    },
+  const contact = await createContact({
+    name: body.name,
+    phone: body.phone,
+    company: body.company,
   });
   return NextResponse.json({ contact });
 }

@@ -10,6 +10,8 @@ export async function GET(req: Request) {
     sipDomain,
     outboundTrunkId,
     inboundTrunkId,
+    vobizWebhook: base ? `${base}/api/webhooks/vobiz` : null,
+    agoraWebhook: base ? `${base}/api/webhooks/agora` : null,
     hangupUrl: base ? `${base}/api/vobiz/hangup` : null,
     answerUrlFallback: base ? `${base}/api/vobiz/answer` : null,
     agoraSbc: "sbc-ap-south.viblinx.com",

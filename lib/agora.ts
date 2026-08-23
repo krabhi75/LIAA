@@ -35,9 +35,13 @@ export function agoraClient(): AgoraClient {
 export function publicBaseUrl(req?: Request): string | null {
   const configured = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "");
   if (configured) return configured;
+  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL?.replace(/\/$/, "");
+  if (prod) return prod.startsWith("http") ? prod : `https://${prod}`;
+  const deploy = process.env.VERCEL_URL?.replace(/\/$/, "");
+  if (deploy) return `https://${deploy}`;
   if (!req) return null;
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
   if (!host) return null;
   return `${proto}://${host}`;
 }

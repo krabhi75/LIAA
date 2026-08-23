@@ -24,6 +24,8 @@ export default function TelephonyPage() {
     outboundTrunkId: string;
     inboundTrunkId: string;
     hangupUrl: string | null;
+    vobizWebhook?: string | null;
+    agoraWebhook?: string | null;
     agoraSbc: string;
   } | null>(null);
 
@@ -74,7 +76,10 @@ export default function TelephonyPage() {
             Outbound trunk {cfg?.outboundTrunkId ?? "a4dc1a99-2efa-4f52-b481-5dfd99aca03d"}
           </div>
           <div className="nova-card__detail">
-            Inbound trunk {cfg?.inboundTrunkId ?? "c56b68cd-591f-4196-92df-e9e7a34aae9b"}
+            CRM Vobiz webhook: {cfg?.vobizWebhook ?? "set PUBLIC_BASE_URL"}
+          </div>
+          <div className="nova-card__detail">
+            CRM Agora webhook: {cfg?.agoraWebhook ?? "set PUBLIC_BASE_URL"}
           </div>
         </article>
 

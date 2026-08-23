@@ -32,33 +32,89 @@ type AgriCase = {
   summary: string;
   status: string;
   escalateReason: string;
+  transcript?: string;
+  direction?: string;
+  phone?: string;
 };
+
+const DISPOSITIONS = [
+  "pending",
+  "dialing",
+  "completed",
+  "interested",
+  "callback",
+  "no_answer",
+  "busy",
+  "failed",
+  "cancelled",
+] as const;
+
+async function jsonSafe(res: Response): Promise<Record<string, unknown>> {
+  try {
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
 
 export default function CrmPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [cases, setCases] = useState<AgriCase[]>([]);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
   const [dialing, setDialing] = useState<string | null>(null);
-  const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [farmer, setFarmer] = useState("");
+  const [crop, setCrop] = useState("");
+  const [village, setVillage] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [hooks, setHooks] = useState<{
+    vobizWebhook?: string;
+    agoraWebhook?: string;
+    hangupUrl?: string;
+  }>({});
 
   const load = useCallback(async () => {
-    const [c, k, a] = await Promise.all([
-      fetch("/api/crm/contacts").then((r) => r.json()),
-      fetch("/api/crm/calls").then((r) => r.json()),
-      fetch("/api/crm/cases").then((r) => r.json()),
-    ]);
-    setContacts(c.contacts ?? []);
-    setCalls(k.calls ?? []);
-    setCases(a.cases ?? []);
+    try {
+      const [cRes, kRes, aRes] = await Promise.all([
+        fetch("/api/crm/contacts"),
+        fetch("/api/crm/calls"),
+        fetch("/api/crm/cases"),
+      ]);
+      const c = await jsonSafe(cRes);
+      const k = await jsonSafe(kRes);
+      const a = await jsonSafe(aRes);
+      setContacts((c.contacts as Contact[]) ?? []);
+      setCalls((k.calls as Call[]) ?? []);
+      setCases((a.cases as AgriCase[]) ?? []);
+    } catch {
+      /* keep last snapshot */
+    }
   }, []);
 
   useEffect(() => {
     void load();
+    void fetch("/api/telephony/config")
+      .then((r) => r.json())
+      .then((d) =>
+        setHooks({
+          vobizWebhook: d.vobizWebhook,
+          agoraWebhook: d.agoraWebhook,
+          hangupUrl: d.hangupUrl,
+        }),
+      );
     const t = setInterval(() => void load(), 4000);
     return () => clearInterval(t);
   }, [load]);
+
+  async function copy(label: string, value?: string) {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setCopied(label);
+    setTimeout(() => setCopied(""), 1500);
+  }
 
   async function addContact(e: FormEvent) {
     e.preventDefault();
@@ -68,13 +124,52 @@ export default function CrmPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, phone }),
     });
-    const data = await res.json();
+    const data = await jsonSafe(res);
     if (!res.ok) {
-      setError(data.error ?? "Could not save");
+      setError(String(data.error ?? "Could not save contact"));
       return;
     }
     setName("");
     setPhone("");
+    await load();
+  }
+
+  async function addCase(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    const res = await fetch("/api/crm/cases", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        farmerName: farmer,
+        phone,
+        crop,
+        village,
+        symptoms,
+      }),
+    });
+    const data = await jsonSafe(res);
+    if (!res.ok) {
+      setError(String(data.error ?? "Could not open case"));
+      return;
+    }
+    setFarmer("");
+    setCrop("");
+    setVillage("");
+    setSymptoms("");
+    await load();
+  }
+
+  async function patchCase(id: string, status: "escalated" | "closed" | "open") {
+    await fetch("/api/crm/cases", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        status,
+        reason: status === "escalated" ? "Handed to agri expert" : undefined,
+      }),
+    });
     await load();
   }
 
@@ -86,9 +181,9 @@ export default function CrmPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(to),
     });
-    const data = await res.json();
+    const data = await jsonSafe(res);
     setDialing(null);
-    if (!res.ok) setError(data.error ?? "Dial failed");
+    if (!res.ok) setError(String(data.error ?? "Dial failed"));
     await load();
   }
 
@@ -109,6 +204,9 @@ export default function CrmPage() {
           <Link href="/demo" className="nova-btn">
             Agora desk
           </Link>
+          <Link href="/telephony" className="nova-btn">
+            SIP
+          </Link>
           <Link href="/" className="nova-btn">
             Home
           </Link>
@@ -116,22 +214,51 @@ export default function CrmPage() {
       </header>
 
       <main className="mx-auto mt-10 max-w-5xl">
-        <p className="nova-label">Field CRM · Vobiz · expert desk</p>
+        <p className="nova-label">Field CRM · Vercel · expert desk</p>
         <h1 className="mt-2 text-3xl font-semibold">Farmer cases. Call. Escalate.</h1>
-        <p className="mt-2 max-w-xl text-sm text-[var(--ink-3)]">
-          Full Agora conversation on the phone: finish{" "}
-          <a href="/telephony" className="text-[var(--agora)]">
-            SIP setup
-          </a>
-          . CRM Dial still uses XML if SIP campaign is not launched. Hangup can
-          update disposition.
+        <p className="mt-2 max-w-2xl text-sm text-[var(--ink-3)]">
+          Desk tool calls and phone hangups land here. Paste the webhook URLs
+          into Vobiz inbound and Agora post-call — not Zoho.
         </p>
-        {error ? <p className="nova-gate__err mt-4">{error}</p> : null}
+
+        {hooks.vobizWebhook ? (
+          <div className="nova-card mt-5">
+            <div className="nova-card__head">
+              <span className="nova-card__verb">Webhooks</span>
+              <span className="nova-card__kind">liaa-ebon.vercel.app</span>
+            </div>
+            <p className="nova-card__detail break-all">
+              Vobiz: {hooks.vobizWebhook}
+            </p>
+            <p className="nova-card__detail break-all">
+              Agora: {hooks.agoraWebhook}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className="nova-btn"
+                type="button"
+                onClick={() => void copy("vobiz", hooks.vobizWebhook)}
+              >
+                Copy Vobiz
+              </button>
+              <button
+                className="nova-btn"
+                type="button"
+                onClick={() => void copy("agora", hooks.agoraWebhook)}
+              >
+                Copy Agora
+              </button>
+              {copied ? (
+                <span className="nova-card__detail">Copied {copied}</span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <form className="mt-8 flex flex-wrap gap-3" onSubmit={addContact}>
           <input
             className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
-            placeholder="Name"
+            placeholder="Contact name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -156,11 +283,47 @@ export default function CrmPage() {
           </button>
         </form>
 
+        <form className="mt-4 flex flex-wrap gap-3" onSubmit={addCase}>
+          <input
+            className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
+            placeholder="Farmer name"
+            value={farmer}
+            onChange={(e) => setFarmer(e.target.value)}
+            required
+          />
+          <input
+            className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
+            placeholder="Crop"
+            value={crop}
+            onChange={(e) => setCrop(e.target.value)}
+          />
+          <input
+            className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
+            placeholder="Village"
+            value={village}
+            onChange={(e) => setVillage(e.target.value)}
+          />
+          <input
+            className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2"
+            placeholder="Symptoms"
+            value={symptoms}
+            onChange={(e) => setSymptoms(e.target.value)}
+          />
+          <button className="nova-btn nova-btn--start" type="submit">
+            Open case
+          </button>
+        </form>
+
+        {error ? <p className="nova-gate__err mt-4">{error}</p> : null}
+
         <section className="mt-10 grid gap-8 md:grid-cols-3">
           <div>
             <h2 className="nova-label-hi">Field cases</h2>
             {cases.length === 0 ? (
-              <p className="nova-empty mt-3">No cases yet. Talk on /demo or call a farmer.</p>
+              <p className="nova-empty mt-3">
+                No cases yet. Talk on /demo, open a case above, or wait for a
+                webhook.
+              </p>
             ) : (
               cases.map((cs) => (
                 <article key={cs.id} className="nova-card mt-3">
@@ -170,13 +333,34 @@ export default function CrmPage() {
                   </div>
                   <div className="nova-card__title">{cs.farmerName}</div>
                   <div className="nova-card__detail">
-                    {[cs.village, cs.district, cs.symptoms || cs.summary]
+                    {[cs.phone, cs.village, cs.district, cs.symptoms || cs.summary]
                       .filter(Boolean)
                       .join(" · ")}
                   </div>
                   {cs.escalateReason ? (
                     <div className="nova-card__detail">Expert: {cs.escalateReason}</div>
                   ) : null}
+                  {cs.transcript ? (
+                    <pre className="nova-card__detail mt-2 whitespace-pre-wrap">
+                      {cs.transcript}
+                    </pre>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      className="nova-btn nova-btn--start"
+                      type="button"
+                      onClick={() => void patchCase(cs.id, "escalated")}
+                    >
+                      Escalate
+                    </button>
+                    <button
+                      className="nova-btn"
+                      type="button"
+                      onClick={() => void patchCase(cs.id, "closed")}
+                    >
+                      Close
+                    </button>
+                  </div>
                 </article>
               ))
             )}
@@ -226,17 +410,7 @@ export default function CrmPage() {
                     value={call.disposition}
                     onChange={(e) => void setDisposition(call.id, e.target.value)}
                   >
-                    {[
-                      "pending",
-                      "dialing",
-                      "completed",
-                      "interested",
-                      "callback",
-                      "no_answer",
-                      "busy",
-                      "failed",
-                      "cancelled",
-                    ].map((d) => (
+                    {DISPOSITIONS.map((d) => (
                       <option key={d} value={d}>
                         {d}
                       </option>

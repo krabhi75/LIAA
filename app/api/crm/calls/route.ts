@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { listCalls, updateCall } from "@/lib/crm-store";
 
 export async function GET() {
-  const calls = await prisma.crmCall.findMany({
-    orderBy: { startedAt: "desc" },
-    take: 40,
-    include: { contact: true },
-  });
+  const calls = await listCalls();
   return NextResponse.json({ calls });
 }
 
@@ -15,9 +11,9 @@ export async function PATCH(req: Request) {
   if (!body.id || !body.disposition) {
     return NextResponse.json({ error: "id and disposition required" }, { status: 400 });
   }
-  const call = await prisma.crmCall.update({
-    where: { id: body.id },
-    data: { disposition: body.disposition },
-  });
+  const call = await updateCall(body.id, { disposition: body.disposition });
+  if (!call) {
+    return NextResponse.json({ error: "call not found" }, { status: 404 });
+  }
   return NextResponse.json({ call });
 }

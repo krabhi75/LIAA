@@ -102,7 +102,8 @@ Never commit `.env.local`.
 | [docs/AGORA_CONSOLE.md](docs/AGORA_CONSOLE.md) | Agora agent prompt, models, VAD, MCP paste guide |
 | [docs/SUBMISSION.md](docs/SUBMISSION.md) | Commudle 15-item checklist |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design |
-| [docs/DEMO.md](docs/DEMO.md) | Video shot list |
+| [docs/DEMO_90S.md](docs/DEMO_90S.md) | 90-second submission reel + voiceover |
+| [docs/DEMO.md](docs/DEMO.md) | Longer 3–5 minute video shot list |
 | [docs/VOBIZ_AGORA.md](docs/VOBIZ_AGORA.md) | SIP / inbound / campaign setup |
 | [docs/OUTBOUND_PATHS.md](docs/OUTBOUND_PATHS.md) | Agora Campaign vs CRM dial |
 

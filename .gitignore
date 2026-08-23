@@ -54,12 +54,14 @@ dev.db-journal
 # Local Cursor chat backups (may contain secrets)
 .chat-backup/
 
-# Agent skill caches (local IDE copies, not part of the app)
+# IDE / agent tooling (not part of the product)
 .agents/
 .claude/
 .windsurf/
+.cursor/
 skills-lock.json
-.cursor/settings.json
+AGENTS.md
+CLAUDE.md
 
 # Local env sync helpers (may reference secrets)
 scripts/inspect-vercel-env.mjs

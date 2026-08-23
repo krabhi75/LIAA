@@ -9,7 +9,7 @@ Agora Campaign CSV → Agora Conversational AI agent → SIP → Vobiz trunk →
 ```
 
 | What updates | Agora Console → **Campaigns** → your campaign stats |
-| Voice engine | **Agora Conversational AI** (Deepgram + GPT-4o-mini + MiniMax) |
+| Voice engine | **Agora Conversational AI** (Deepgram + OpenAI + ElevenLabs) |
 | Language | Hindi / Hinglish via Agora agent prompt |
 | When to use | Hackathon judges, barge-in demo, “Conversational AI outbound” proof |
 

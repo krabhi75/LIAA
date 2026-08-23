@@ -2,7 +2,7 @@
   "name": "aetherclose",
   "version": "0.1.0",
   "private": true,
-  "description": "EchoSphere PS21 adaptive voice AI sales agent on Agora Conversational AI",
+  "description": "KrishiSaathi / LIAA — Hindi agri voice assistant on Agora (Deepgram · OpenAI · ElevenLabs)",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",

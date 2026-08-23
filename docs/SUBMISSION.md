@@ -54,7 +54,7 @@ Shot list: [DEMO.md](./DEMO.md). Suggested arc:
 
 ## 7. How Agora Conversational AI is used
 
-- Browser `/demo`: user joins Agora RTC; server `POST /api/invite-agent` starts `agora-agents` session with Deepgram STT (`hi`), GPT-4o-mini, MiniMax TTS, MCP tools, barge-in.  
+- Browser `/demo`: user joins Agora RTC; server `POST /api/invite-agent` starts `agora-agents` session with **Deepgram** STT (`hi`), **OpenAI** GPT-4o-mini, **ElevenLabs** TTS, MCP tools, barge-in.  
 - PSTN outbound (campaign): Agora dials via Vobiz SIP trunk; same Conversational AI engine handles the call (see [VOBIZ_AGORA.md](./VOBIZ_AGORA.md)).  
 - Audio and turn-taking stay on Agora — our server only tokens, start/stop, and tools.
 
@@ -64,10 +64,10 @@ Shot list: [DEMO.md](./DEMO.md). Suggested arc:
 
 | Service | Role |
 |---------|------|
-| **Agora Conversational AI** | RTC, STT, LLM routing, TTS, barge-in |
-| **Deepgram** (via Agora) | Speech-to-text Hindi |
-| **OpenAI GPT-4o-mini** (via Agora) | Dialog + tool planning |
-| **MiniMax** (via Agora) | Text-to-speech |
+| **Agora Conversational AI** | RTC, barge-in, turn-taking |
+| **Deepgram** (via Agora) | ASR — speech-to-text Hindi |
+| **OpenAI GPT-4o-mini** (via Agora) | LLM — dialog + tools |
+| **ElevenLabs** (via Agora) | TTS — text-to-speech |
 | **Vobiz** | PSTN SIP trunk, XML IVR leg for CRM dialer |
 | **Open-Meteo** | Geocode + live weather (no key) |
 | **Neon Postgres** | CRM, calls, farmers, cases |

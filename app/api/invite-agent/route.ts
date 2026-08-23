@@ -4,9 +4,9 @@ import {
   AudioScenario,
   DataChannel,
   DeepgramSTT,
+  ElevenLabsTTS,
   ExpiresIn,
   InterruptionModeStartOfSpeech,
-  MiniMaxTTS,
   OpenAI,
 } from "agora-agents";
 import {
@@ -81,13 +81,25 @@ export async function POST(req: NextRequest) {
         failureMessage: FAILURE_MESSAGE,
         mcpKey: mcpKey(),
         sttModel: "nova-3",
-        ttsModel: "speech-2.6-turbo",
+        ttsModel:
+          process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2",
         ttsVoiceId:
+          process.env.ELEVENLABS_VOICE_ID ||
           process.env.LIAA_TTS_VOICE ||
-          process.env.NOVA_TTS_VOICE ||
-          "English_captivating_female1",
+          "21m00Tcm4TlvDq8ikWAM",
         idleTimeout: 180,
       };
+    }
+
+    const elevenKey = process.env.ELEVENLABS_API_KEY?.trim();
+    if (!elevenKey) {
+      return NextResponse.json(
+        {
+          error:
+            "ELEVENLABS_API_KEY is missing. Set it on the host (ASR Deepgram · LLM OpenAI · TTS ElevenLabs).",
+        },
+        { status: 500 },
+      );
     }
 
     bindSessionMeta(channel, {
@@ -156,15 +168,18 @@ export async function POST(req: NextRequest) {
       )
       .withLlm(llm)
       .withTts(
-        new MiniMaxTTS({
-          model: config.ttsModel || "speech-2.6-turbo",
-          // Prefer Hindi-capable voice when set; English id still speaks Hinglish well enough for demos
+        new ElevenLabsTTS({
+          key: elevenKey,
+          modelId: config.ttsModel || "eleven_multilingual_v2",
           voiceId:
             config.ttsVoiceId ||
-            process.env.LIAA_TTS_VOICE ||
-            process.env.NOVA_TTS_VOICE ||
-            "English_captivating_female1",
-        } as ConstructorParameters<typeof MiniMaxTTS>[0]),
+            process.env.ELEVENLABS_VOICE_ID ||
+            "21m00Tcm4TlvDq8ikWAM",
+          baseUrl:
+            process.env.ELEVENLABS_BASE_URL ||
+            "wss://api.elevenlabs.io/v1",
+          optimizeStreamingLatency: 3,
+        } as ConstructorParameters<typeof ElevenLabsTTS>[0]),
       )
       .withTools(mcpAttached);
 

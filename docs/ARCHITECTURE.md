@@ -22,8 +22,8 @@ The browser joins an **Agora RTC** channel; the **Conversational AI Engine** own
 ┌──────────────┐     RTC + RTM      ┌─────────────────────────────┐
 │  Browser     │◄──────────────────►│  Agora Conversational AI    │
 │  /demo desk  │                    │  STT (Deepgram)             │
-│  YOU / LIAA  │                    │  LLM (GPT-4o-mini)          │
-│  orb · cards │                    │  TTS (MiniMax)              │
+│  YOU / LIAA  │                    │  LLM (OpenAI gpt-4o-mini)   │
+│  orb · cards │                    │  TTS (ElevenLabs)           │
 └──────┬───────┘                    │  Agent UID 123456           │
        │ HTTP                       └──────────────┬──────────────┘
        │ token / invite / stop / session           │ MCP HTTPS
@@ -45,10 +45,10 @@ flowchart TB
   API -->|session.start| CAI[Conversational AI Engine]
   CAI -->|agent uid 123456| RTC
   CAI --> STT[Deepgram STT hi]
-  STT --> LLM[GPT-4o-mini Hindi Hinglish]
+  STT --> LLM[OpenAI GPT-4o-mini]
   LLM -->|MCP tools| MCP["/api/mcp"]
   MCP --> Tools[calendar mail tab memory]
-  LLM --> TTS[MiniMax TTS]
+  LLM --> TTS[ElevenLabs TTS]
   TTS --> CAI
   CAI -->|transcripts| RTM[Agora RTM]
   RTM --> Desk
@@ -65,14 +65,14 @@ flowchart TB
 | Mic capture, playback, channel | Agora RTC SDK in the browser |
 | Turn-taking, barge-in | Conversational AI Engine |
 | Speech-to-text | Deepgram via Agora (`language: hi`) |
-| Reasoning | OpenAI GPT-4o-mini via Agora LLM adapter (Hindi / Hinglish replies) |
-| Text-to-speech | MiniMax via Agora TTS adapter |
+| Reasoning | OpenAI GPT-4o-mini via Agora LLM adapter (Hindi / Hinglish) |
+| Text-to-speech | ElevenLabs via Agora TTS adapter |
 | Tool calls | MCP server at `PUBLIC_BASE_URL/api/mcp` |
 | Tokens / start / stop | Our Next.js routes only |
 
-We intentionally **do not** pipe voice through a custom Groq / OpenAI-compat callback or replace Agora with Twilio / ElevenLabs as the conversation engine. That would break the hackathon voice requirement and add latency.
+We intentionally **do not** replace Agora with a custom STT→LLM→TTS loop outside Conversational AI. Optional PSTN (Vobiz) bridges into Agora SIP or uses a separate CRM XML leg documented in OUTBOUND_PATHS.md.
 
-**ElevenLabs / Google Calendar Gmail** are optional later upgrades (voice quality / real data). They are **not** required for multi-function demos — tools already chain via MCP.
+**Google Calendar / Gmail** are optional later upgrades (real data). Demo tools already chain via MCP.
 
 ---
 
@@ -101,10 +101,10 @@ We intentionally **do not** pipe voice through a custom Groq / OpenAI-compat cal
 
 - `turnDetection.language`: `hi-IN`  
 - `DeepgramSTT`: model `nova-3`, language `hi`  
-- LLM: OpenAI-compatible GPT-4o-mini + system prompt from `buildLiaaSystemPrompt` (speak Hindi / Hinglish)  
-- `MiniMaxTTS`: voice id configurable (`LIAA_TTS_VOICE`)  
+- LLM: OpenAI GPT-4o-mini + system prompt from `buildLiaaSystemPrompt`  
+- `ElevenLabsTTS`: model `eleven_multilingual_v2`, voice from `ELEVENLABS_VOICE_ID`  
 - MCP servers registered when `PUBLIC_BASE_URL` is a **public HTTPS** URL (not localhost)  
-- Greeting from `liaaGreeting()` (Hindi: “नमस्ते। Liaa तैयार है…”)
+- Greeting from `liaaGreeting()`
 
 **Language split:** desk chrome (buttons, labels, status) is **English**; spoken conversation and transcripts are **Hindi / Hinglish**.
 
@@ -153,7 +153,7 @@ Each browser tab gets a unique **channel** string (`useClientChannel`) so sessio
 4. Client joins Agora RTC, publishes mic
 5. POST /api/invite-agent → Agent.createSession().start()
 6. Liaa greets in Hindi on the channel
-7. User speaks (Hindi/Hinglish) → Deepgram → LLM → optional MCP tool(s) → MiniMax → audio
+7. User speaks (Hindi/Hinglish) → Deepgram → OpenAI → optional MCP tool(s) → ElevenLabs → audio
 8. RTM transcripts stream to desk; tool cards appear in Actions
 9. Stop conversation → agent stop + leave channel
 ```
@@ -190,8 +190,9 @@ AETHER_MCP_KEY=
 DATABASE_URL="file:./dev.db"
 AUTH_SECRET=
 # optional
-LIAA_TTS_VOICE=          # overrides MiniMax voice id
-NOVA_TTS_VOICE=          # legacy alias still accepted
+ELEVENLABS_API_KEY=      # required for /demo TTS
+ELEVENLABS_VOICE_ID=     # optional voice id
+ELEVENLABS_MODEL_ID=eleven_multilingual_v2
 ```
 
 **MCP rule:** Agora’s cloud must call your tool endpoint. `localhost` → **tools offline**. Run:
@@ -227,7 +228,7 @@ Auth/console routes under `/app/*` redirect or stub toward the public desk for t
 |---|---|
 | Framework | Next.js 16 (App Router) + TypeScript |
 | Voice | `agora-agents`, `agora-rtc-sdk-ng`, `agora-rtm-sdk`, client toolkit |
-| STT / LLM / TTS | Deepgram nova-3 · GPT-4o-mini · MiniMax speech-2.6-turbo (via Agora) |
+| STT / LLM / TTS | Deepgram nova-3 · OpenAI gpt-4o-mini · ElevenLabs multilingual (via Agora) |
 | Tools | MCP over HTTPS |
 | DB | Prisma + SQLite |
 | UI | Custom instrument CSS (`nova.css` class prefix retained) |

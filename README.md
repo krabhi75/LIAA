@@ -1,30 +1,52 @@
 # KrishiSaathi (LIAA)
 
-Hindi voice agricultural assistant — **speaks, listens, captures, and acts** — on **Agora Conversational AI**, with PSTN field ops via Vobiz.
+**Hindi voice agricultural assistant** for Indian farmers — built on **Agora Conversational AI**.
 
-**GitHub:** https://github.com/krabhi75/LIAA  
-**Live:** https://liaa-ebon.vercel.app  
-
----
-
-## What it does
-
-| Surface | User | Capability |
-|---------|------|------------|
-| **`/demo`** | Operator with mic | Agora Conversational AI desk — Hindi/Hinglish, barge-in, MCP tools |
-| **`/crm`** | Field team | Farmer CRM, outbound dial, call timeline, weather on profile |
-| **Agora Campaign** | Campaign outbound | Agora CAI → Vobiz SIP → farmer phone (see telephony setup) |
-| **Inbound DID** | Farmer calls +917971443138 | Vobiz → Agora SIP → Liaa agent |
-
-KrishiSaathi phone flow (CRM dial): name → district → live weather → crop help → expert case.
+| | |
+|---|---|
+| **Live app** | https://liaa-ebon.vercel.app |
+| **GitHub** | https://github.com/krabhi75/LIAA |
+| **Demo desk** | https://liaa-ebon.vercel.app/demo |
+| **Farmer CRM** | https://liaa-ebon.vercel.app/crm |
 
 ---
 
-## Important: two outbound paths
+## Voice stack (Agora Conversational AI)
 
-**CRM “Call” does not update Agora Campaign stats.** Agora Campaigns only count CSV/campaign-initiated dials. CRM uses Vobiz XML + Polly.Aditi Hindi bot.
+| Layer | Provider | Role |
+|-------|----------|------|
+| **ASR** | **Deepgram** (nova-3, `hi`) | Speech → text |
+| **LLM** | **OpenAI** (gpt-4o-mini) | Dialog, tools, reasoning |
+| **TTS** | **ElevenLabs** (multilingual) | Text → speech |
 
-Full explanation: **[docs/OUTBOUND_PATHS.md](docs/OUTBOUND_PATHS.md)**
+Agora owns the real-time channel, barge-in, and turn-taking. Our Next.js app only starts/stops the agent and runs tools (MCP + CRM).
+
+---
+
+## What you can demo
+
+1. **Browser desk (`/demo`)** — Start conversation → speak Hindi/Hinglish → barge-in → tools update on screen.  
+2. **Farmer CRM (`/crm`)** — Dial a farmer → KrishiSaathi asks name → location → live weather → crop help → expert case.  
+3. **Agora Campaign outbound** — CSV dial via Vobiz SIP (Agora CAI on the phone). See [docs/OUTBOUND_PATHS.md](docs/OUTBOUND_PATHS.md).
+
+> **Note:** Calls from the CRM **Call** button use Vobiz XML (Polly.Aditi Hindi) and update the **LIAA CRM dashboard**, not the Agora Campaign counter.
+
+---
+
+## Architecture (short)
+
+```text
+Farmer / operator mic
+        │
+        ▼
+ Agora RTC + Conversational AI
+   ASR: Deepgram  →  LLM: OpenAI  →  TTS: ElevenLabs
+        │
+        ├── MCP tools  →  calendar / mail / memory / tabs
+        └── CRM APIs   →  farmers, calls, weather (Open-Meteo), cases
+```
+
+More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
@@ -34,46 +56,36 @@ Full explanation: **[docs/OUTBOUND_PATHS.md](docs/OUTBOUND_PATHS.md)**
 git clone https://github.com/krabhi75/LIAA.git
 cd LIAA
 npm install
-cp .env.example .env.local   # fill Agora + Vobiz + DATABASE_URL
+cp .env.example .env.local
+# fill Agora + ElevenLabs + DATABASE_URL (+ Vobiz for phone)
 npm run db:push
 npm run dev
 ```
 
-Open http://localhost:3000/demo (Agora desk) or http://localhost:3000/crm (farmers).
-
-Production uses **Neon Postgres** (`DATABASE_URL` + `DIRECT_URL` on Vercel).
+Open http://localhost:3000/demo
 
 ---
 
-## Architecture
-
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Agora RTC desk, MCP tools, UIDs, env  
-- **[docs/VOBIZ_AGORA.md](docs/VOBIZ_AGORA.md)** — SIP trunks, inbound SBC, campaign setup  
-- **[docs/SUBMISSION.md](docs/SUBMISSION.md)** — Hackathon Commudle checklist (15 items)  
-- **[docs/DEMO.md](docs/DEMO.md)** — Video shot list  
-
-```text
-Browser /demo → Agora RTC → Conversational AI (Deepgram · GPT-4o-mini · MiniMax)
-                                    ↓ MCP
-                              /api/mcp → tools + CRM
-
-CRM Call → Vobiz REST → /api/vobiz/answer (XML KrishiSaathi, Polly.Aditi hi-IN STT)
-                              ↓
-                         Neon CRM + Open-Meteo weather
-```
-
----
-
-## Env (`.env.local`)
+## Environment
 
 ```bash
+# Agora
 NEXT_PUBLIC_AGORA_APP_ID=
 NEXT_AGORA_APP_CERTIFICATE=
 AGORA_AREA=US
 PUBLIC_BASE_URL=https://liaa-ebon.vercel.app
 AETHER_MCP_KEY=
-DATABASE_URL=          # Neon pooled URL on Vercel
-DIRECT_URL=            # Neon direct URL for migrations
+
+# Voice stack
+ELEVENLABS_API_KEY=           # required for /demo TTS
+ELEVENLABS_VOICE_ID=          # optional (default: Rachel)
+ELEVENLABS_MODEL_ID=eleven_multilingual_v2
+
+# Database (Neon on production)
+DATABASE_URL=
+DIRECT_URL=
+
+# Phone (CRM outbound / SIP)
 VOBIZ_AUTH_ID=
 VOBIZ_AUTH_TOKEN=
 VOBIZ_FROM_NUMBER=+917971443138
@@ -83,12 +95,18 @@ Never commit `.env.local`.
 
 ---
 
-## Hackathon submission
+## Docs
 
-All 15 Commudle assets are mapped in **[docs/SUBMISSION.md](docs/SUBMISSION.md)**.
+| Doc | Purpose |
+|-----|---------|
+| [docs/SUBMISSION.md](docs/SUBMISSION.md) | Commudle 15-item checklist |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design |
+| [docs/DEMO.md](docs/DEMO.md) | Video shot list |
+| [docs/VOBIZ_AGORA.md](docs/VOBIZ_AGORA.md) | SIP / inbound / campaign setup |
+| [docs/OUTBOUND_PATHS.md](docs/OUTBOUND_PATHS.md) | Agora Campaign vs CRM dial |
 
 ---
 
 ## License
 
-MIT — see repository for hackathon/EchoSphere context.
+MIT — EchoSphere / Commudle hackathon submission.

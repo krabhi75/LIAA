@@ -14,6 +14,7 @@ import {
   jsonSafe,
   when,
 } from "@/components/stitch/crm";
+import { formatPhoneForDisplay } from "@/lib/demo-crm-seed";
 import {
   DataTableShell,
   MetricTile,
@@ -311,7 +312,7 @@ export default function FarmersPage() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Icon name="call" className="text-[16px]" />
-                          {c.phone}
+                          {formatPhoneForDisplay(c.phone)}
                         </a>
                       </td>
                       <td className="px-4 py-2 text-ks-muted">{village}</td>

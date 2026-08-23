@@ -1,4 +1,5 @@
 import { ensureDemoTenant } from "../lib/saas";
+import { seedDemoCrmData } from "../lib/demo-crm-seed";
 
 async function main() {
   const demo = await ensureDemoTenant();
@@ -8,15 +9,13 @@ async function main() {
   console.log("  org:     ", demo.org.slug);
   console.log("  agent:   ", demo.agent.slug, demo.agent.id);
 
-  const { prisma } = await import("../lib/db");
-  const count = await prisma.crmContact.count();
-  if (count === 0) {
-    await prisma.crmContact.createMany({
-      data: [
-        { name: "Demo Judge", phone: "+919876543210", company: "EchoSphere" },
-      ],
-    });
-    console.log("  seeded 1 CRM contact (edit phone before dialing)");
+  const seeded = await seedDemoCrmData();
+  if (seeded.skipped) {
+    console.log("  CRM demo farmers already seeded (9999-9999-99 … 80)");
+  } else {
+    console.log(
+      `  seeded ${seeded.farmers} farmers, ${seeded.calls} calls, ${seeded.cases} cases`,
+    );
   }
 }
 

@@ -14,6 +14,7 @@ import {
   isCaseOpen,
   type CaseDisposition,
 } from "@/components/stitch/crm-ui";
+import { formatPhoneForDisplay } from "@/lib/demo-crm-seed";
 
 type TimelineItem = {
   id: string;
@@ -206,7 +207,7 @@ export default function FarmerProfilePage() {
                     )}
                   </div>
                   <p className="mt-1 text-sm text-ks-muted">
-                    {profile.farmer.phone}
+                    {formatPhoneForDisplay(profile.farmer.phone)}
                     {profile.farmer.village
                       ? ` · ${profile.farmer.village}`
                       : ""}

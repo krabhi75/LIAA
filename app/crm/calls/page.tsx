@@ -11,6 +11,7 @@ import {
   jsonSafe,
   when,
 } from "@/components/stitch/crm";
+import { formatPhoneForDisplay } from "@/lib/demo-crm-seed";
 
 export default function LiveCallsPage() {
   const [calls, setCalls] = useState<Call[]>([]);
@@ -117,7 +118,7 @@ export default function LiveCallsPage() {
                             href={`tel:${call.phone}`}
                           >
                             <Icon name="call" className="text-[16px]" />
-                            {call.phone}
+                            {formatPhoneForDisplay(call.phone)}
                           </a>
                           <span className="rounded-full bg-ks-container px-2 py-0.5 text-xs">
                             {inbound ? "Inbound" : "Outbound"}

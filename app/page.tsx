@@ -12,6 +12,7 @@ import {
   when,
 } from "@/components/stitch/crm";
 import { MetricTile, PageHeader } from "@/components/stitch/crm-ui";
+import { CallMixChart } from "@/components/stitch/CallMixChart";
 import {
   buildCropBuckets,
   buildIssueBuckets,
@@ -158,23 +159,15 @@ export default function DashboardPage() {
             <h3 className="ks-record-panel__title">Call mix</h3>
           </div>
           <div className="ks-record-panel__body">
-            <p className="mb-6 text-sm text-ks-muted">Inbound vs outbound from live CRM</p>
-            <div className="flex h-48 items-end gap-8 px-4">
-            <Bar label="Inbound" h={inbound} max={funnelMax} color="bg-ks-primary" />
-            <Bar
-              label="Outbound"
-              h={outbound}
-              max={funnelMax}
-              color="bg-ks-secondary"
+            <p className="mb-4 text-sm text-ks-muted">
+              Direction split and operations volume from live CRM
+            </p>
+            <CallMixChart
+              inbound={inbound}
+              outbound={outbound}
+              live={live}
+              casesCount={cases.length}
             />
-            <Bar label="Live" h={live} max={funnelMax} color="bg-ks-mint" />
-            <Bar
-              label="Cases"
-              h={cases.length}
-              max={funnelMax}
-              color="bg-ks-primary-container"
-            />
-            </div>
           </div>
         </div>
 
@@ -253,27 +246,6 @@ export default function DashboardPage() {
         </div>
       </section>
     </Shell>
-  );
-}
-
-function Bar({
-  label,
-  h,
-  max,
-  color,
-}: {
-  label: string;
-  h: number;
-  max: number;
-  color: string;
-}) {
-  const pct = Math.max(h > 0 ? 8 : 2, Math.round((h / Math.max(max, 1)) * 100));
-  return (
-    <div className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-      <div className={`w-full rounded-t-sm ${color}`} style={{ height: `${pct}%` }} />
-      <span className="text-[11px] text-ks-muted">{label}</span>
-      <span className="ks-display text-sm font-semibold">{h}</span>
-    </div>
   );
 }
 

@@ -3,6 +3,7 @@ import {
   createAgriCase,
   escalateAgriCase,
   listAgriCases,
+  resolveAgriCase,
   setAgriCaseStatus,
 } from "@/lib/agri-cases";
 
@@ -59,31 +60,50 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const body = (await req.json()) as {
     id?: string;
-    status?: "open" | "escalated" | "closed";
+    status?: "open" | "escalated" | "closed" | "resolved" | "completed";
+    disposition?: string;
     reason?: string;
+    note?: string;
   };
   if (!body.id) {
-    return NextResponse.json({ error: "id required" }, { status: 400 });
+    return liveJson({ error: "id required" }, 400);
   }
+
+  if (body.disposition) {
+    const row = await resolveAgriCase(
+      body.id,
+      body.disposition,
+      body.note ?? body.reason,
+    );
+    if (!row) return liveJson({ error: "case not found" }, 404);
+    return liveJson({ case: row });
+  }
+
   const status = body.status ?? (body.reason ? "escalated" : undefined);
   if (!status) {
-    return NextResponse.json({ error: "status required" }, { status: 400 });
+    return liveJson({ error: "status or disposition required" }, 400);
   }
   switch (status) {
     case "escalated": {
       const row = await escalateAgriCase(body.id, body.reason || "Expert desk");
-      if (!row) return NextResponse.json({ error: "case not found" }, { status: 404 });
-      return NextResponse.json({ case: row });
+      if (!row) return liveJson({ error: "case not found" }, 404);
+      return liveJson({ case: row });
     }
     case "open":
-    case "closed": {
-      const row = await setAgriCaseStatus(body.id, status);
-      if (!row) return NextResponse.json({ error: "case not found" }, { status: 404 });
-      return NextResponse.json({ case: row });
+    case "closed":
+    case "resolved":
+    case "completed": {
+      const row = await setAgriCaseStatus(
+        body.id,
+        status,
+        body.note ?? body.reason,
+      );
+      if (!row) return liveJson({ error: "case not found" }, 404);
+      return liveJson({ case: row });
     }
     default: {
       const _exhaustive: never = status;
-      return NextResponse.json({ error: String(_exhaustive) }, { status: 400 });
+      return liveJson({ error: String(_exhaustive) }, 400);
     }
   }
 }

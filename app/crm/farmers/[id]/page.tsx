@@ -4,7 +4,16 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Shell } from "@/components/stitch/Shell";
 import { Icon } from "@/components/stitch/Icon";
-import { initials, jsonSafe, when } from "@/components/stitch/crm";
+import { initials, isCallLive, jsonSafe, when } from "@/components/stitch/crm";
+import {
+  CASE_DISPOSITIONS,
+  CrmButton,
+  RecordPanel,
+  StatusBadge,
+  caseStatusTone,
+  isCaseOpen,
+  type CaseDisposition,
+} from "@/components/stitch/crm-ui";
 
 type TimelineItem = {
   id: string;
@@ -34,15 +43,18 @@ type Farmer = {
   notes: string;
 };
 
+type CaseRow = {
+  id: string;
+  crop: string;
+  village: string;
+  status: string;
+  summary: string;
+  escalateReason?: string;
+};
+
 type Profile = {
   farmer: Farmer;
-  cases: Array<{
-    id: string;
-    crop: string;
-    village: string;
-    status: string;
-    summary: string;
-  }>;
+  cases: CaseRow[];
   timeline: TimelineItem[];
   lastInbound?: string;
   lastOutbound?: string;
@@ -162,80 +174,67 @@ export default function FarmerProfilePage() {
     (item) =>
       item.kind === "call" &&
       item.status &&
-      ["queued", "ringing", "dialing", "in-progress"].includes(item.status),
+      isCallLive({
+        status: item.status,
+        startedAt: item.at,
+        endedAt: null,
+      }),
   );
+  const openCases = profile?.cases.filter((c) => isCaseOpen(c.status)) ?? [];
 
   return (
-    <Shell title="Farmer profile">
+    <Shell title="Farmer record">
       {!profile ? (
         <p className="text-ks-muted">{error || "Loading farmer…"}</p>
       ) : (
         <>
-          <header className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div className="flex items-center gap-4">
-              <div className="relative flex h-12 w-12 items-center justify-center">
-                {live ? (
-                  <span className="absolute inset-0 animate-ping rounded-full bg-ks-error/30" />
-                ) : null}
-                <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-ks-error text-white">
-                  <Icon name="mic" filled />
-                </span>
+          <div className="ks-record-hero">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0176d3] text-lg font-bold text-white">
+                  {initials(profile.farmer.name)}
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="ks-display text-2xl font-bold">
+                      {profile.farmer.name}
+                    </h2>
+                    {live ? (
+                      <StatusBadge label="Live call" tone="live" />
+                    ) : (
+                      <StatusBadge label="Account active" tone="brand" />
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-ks-muted">
+                    {profile.farmer.phone}
+                    {profile.farmer.village
+                      ? ` · ${profile.farmer.village}`
+                      : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-ks-muted">
+                    {profile.timeline.length} activities · Inbound{" "}
+                    {when(profile.lastInbound)} · Outbound{" "}
+                    {when(profile.lastOutbound)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="ks-display text-2xl font-semibold">
-                  {live ? "Active call" : "Farmer profile"}{" "}
-                  <span className="text-base font-normal text-ks-muted">
-                    {profile.farmer.name}
-                  </span>
-                </h2>
-                <p className="mt-1 text-sm text-ks-muted">
-                  {profile.timeline.length} activities · Last inbound{" "}
-                  {when(profile.lastInbound)} · Last outbound{" "}
-                  {when(profile.lastOutbound)}
-                </p>
+              <div className="flex flex-wrap gap-2">
+                <CrmButton variant="secondary" onClick={() => setEditing((v) => !v)}>
+                  {editing ? "Cancel edit" : "Edit record"}
+                </CrmButton>
+                <CrmButton variant="brand" disabled={dialing} onClick={() => void callNow()}>
+                  <Icon name="call" className="text-[16px]" />
+                  {dialing ? "Dialing…" : "Call farmer"}
+                </CrmButton>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                className="rounded-lg border border-ks-outline px-4 py-2 text-sm font-medium hover:bg-ks-low"
-                type="button"
-                onClick={() => setEditing((v) => !v)}
-              >
-                {editing ? "Cancel" : "Edit profile"}
-              </button>
-              <button
-                className="flex items-center gap-2 rounded-lg bg-ks-primary-container px-4 py-2 text-sm font-medium text-white hover:bg-ks-primary disabled:opacity-40"
-                type="button"
-                disabled={dialing}
-                onClick={() => void callNow()}
-              >
-                <Icon name="call" />
-                {dialing ? "Dialing…" : "Call this farmer"}
-              </button>
-            </div>
-          </header>
+          </div>
           {error ? <p className="mb-4 text-sm text-ks-error">{error}</p> : null}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
             <aside className="flex flex-col gap-4 lg:col-span-3">
-              <form
-                className="rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-sm"
-                onSubmit={(e) => void saveProfile(e)}
-              >
-                <div className="mb-3 flex items-center gap-3 border-b border-ks-line pb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ks-container font-semibold text-ks-primary">
-                    {initials(form.name || profile.farmer.name)}
-                  </div>
-                  <div>
-                    <h3 className="ks-display text-lg font-semibold">
-                      {form.name || profile.farmer.name}
-                    </h3>
-                    <p className="text-xs text-ks-muted">
-                      {editing ? "Editing record" : "Verified farmer"}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3 text-sm">
+              <RecordPanel title="Contact details" icon="badge">
+                <form className="space-y-3" onSubmit={(e) => void saveProfile(e)}>
                   <Field
                     label="Name"
                     value={form.name}
@@ -278,47 +277,61 @@ export default function FarmerProfilePage() {
                     disabled={!editing}
                     onChange={(v) => setForm((f) => ({ ...f, crop: v }))}
                   />
-                </div>
-                {profile.farmer.weatherSummary ? (
-                  <div className="mt-3 rounded-lg bg-ks-low p-3 text-sm">
-                    <p className="text-xs font-semibold uppercase text-ks-muted">Live weather</p>
-                    <p className="mt-1">{profile.farmer.weatherSummary}</p>
-                    {profile.farmer.weatherAt ? (
-                      <p className="mt-1 text-xs text-ks-muted">{when(profile.farmer.weatherAt)}</p>
-                    ) : null}
+                  {profile.farmer.weatherSummary ? (
+                    <div className="rounded-md border border-ks-line bg-ks-low p-3 text-sm">
+                      <p className="text-xs font-semibold uppercase text-ks-muted">
+                        Live weather
+                      </p>
+                      <p className="mt-1">{profile.farmer.weatherSummary}</p>
+                      {profile.farmer.weatherAt ? (
+                        <p className="mt-1 text-xs text-ks-muted">
+                          {when(profile.farmer.weatherAt)}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {editing ? (
+                    <CrmButton
+                      variant="brand"
+                      type="submit"
+                      disabled={saving}
+                      className="w-full"
+                    >
+                      {saving ? "Saving…" : "Save record"}
+                    </CrmButton>
+                  ) : null}
+                </form>
+              </RecordPanel>
+
+              <RecordPanel title="Engagement summary" icon="insights">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-ks-muted">Calls</span>
+                    <span className="font-semibold">
+                      {profile.timeline.filter((i) => i.kind === "call").length}
+                    </span>
                   </div>
-                ) : null}
-                {editing ? (
-                  <button
-                    className="mt-4 w-full rounded-lg bg-ks-secondary px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
-                    type="submit"
-                    disabled={saving}
-                  >
-                    {saving ? "Saving…" : "Save farmer"}
-                  </button>
-                ) : null}
-              </form>
-              <div className="rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-sm">
-                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ks-muted">
-                  History
-                </h4>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span>Calls</span>
-                  <span className="rounded-full bg-ks-low px-2 py-0.5 text-xs">
-                    {profile.timeline.filter((i) => i.kind === "call").length}
-                  </span>
+                  <div className="flex justify-between">
+                    <span className="text-ks-muted">Cases</span>
+                    <span className="font-semibold">{profile.cases.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ks-muted">Open cases</span>
+                    <span className="font-semibold">{openCases.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-ks-muted">Latest status</span>
+                    {latest ? (
+                      <StatusBadge
+                        label={latest.status}
+                        tone={caseStatusTone(latest.status)}
+                      />
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </div>
                 </div>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span>Cases</span>
-                  <span className="rounded-full bg-ks-low px-2 py-0.5 text-xs">
-                    {profile.cases.length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Status</span>
-                  <span className="text-ks-muted">{latest?.status || "none"}</span>
-                </div>
-              </div>
+              </RecordPanel>
             </aside>
 
             <section className="flex flex-col rounded-xl border border-ks-outline bg-ks-surface shadow-sm lg:col-span-6">
@@ -397,32 +410,122 @@ export default function FarmerProfilePage() {
               </form>
             </section>
 
-            <aside className="rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-sm lg:col-span-3">
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ks-muted">
-                Open cases
-              </h4>
-              {profile.cases.length === 0 ? (
-                <p className="text-sm text-ks-muted">
-                  Cases appear as the farmer describes crop, village, and symptoms.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {profile.cases.map((cs) => (
-                    <div key={cs.id} className="rounded-lg border border-ks-line p-3">
-                      <p className="text-xs uppercase text-ks-muted">{cs.status}</p>
-                      <p className="font-medium">{cs.crop || "Crop"}</p>
-                      <p className="text-sm text-ks-muted">
-                        {[cs.village, cs.summary].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <aside className="flex flex-col gap-4 lg:col-span-3">
+              <RecordPanel
+                title={`Cases (${profile.cases.length})`}
+                icon="folder_open"
+              >
+                {profile.cases.length === 0 ? (
+                  <p className="text-sm text-ks-muted">
+                    Cases appear when the farmer describes crop, village, and
+                    symptoms on a call.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {profile.cases.map((cs) => (
+                      <CaseResolveCard
+                        key={cs.id}
+                        caseRow={cs}
+                        onResolved={() => void load()}
+                      />
+                    ))}
+                  </div>
+                )}
+              </RecordPanel>
             </aside>
           </div>
         </>
       )}
     </Shell>
+  );
+}
+
+function CaseResolveCard({
+  caseRow,
+  onResolved,
+}: {
+  caseRow: CaseRow;
+  onResolved: () => void;
+}) {
+  const [disposition, setDisposition] = useState<CaseDisposition>("resolved");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const open = isCaseOpen(caseRow.status);
+
+  async function resolveCase(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    const res = await fetch("/api/crm/cases", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: caseRow.id,
+        disposition,
+        note: note.trim() || undefined,
+      }),
+    });
+    const data = await jsonSafe(res);
+    setSaving(false);
+    if (!res.ok) {
+      setError(String(data.error ?? "Could not update case"));
+      return;
+    }
+    setNote("");
+    onResolved();
+  }
+
+  return (
+    <article className="rounded-md border border-ks-line bg-ks-bg p-3">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div>
+          <p className="font-semibold">{caseRow.crop || "Agri case"}</p>
+          <p className="text-xs text-ks-muted">
+            {[caseRow.village, caseRow.summary].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <StatusBadge label={caseRow.status} tone={caseStatusTone(caseRow.status)} />
+      </div>
+      {caseRow.escalateReason ? (
+        <p className="mb-2 text-xs text-ks-muted">
+          Resolution note: {caseRow.escalateReason}
+        </p>
+      ) : null}
+      {open ? (
+        <form className="mt-3 space-y-2 border-t border-ks-line pt-3" onSubmit={(e) => void resolveCase(e)}>
+          <label className="block text-xs font-semibold text-ks-muted">
+            Disposition
+            <select
+              className="ks-select mt-1"
+              value={disposition}
+              onChange={(e) => setDisposition(e.target.value as CaseDisposition)}
+            >
+              {CASE_DISPOSITIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold text-ks-muted">
+            Desk note (optional)
+            <input
+              className="ks-input mt-1"
+              placeholder="What was advised or next step"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </label>
+          {error ? <p className="text-xs text-ks-error">{error}</p> : null}
+          <CrmButton variant="primary" type="submit" disabled={saving} className="w-full">
+            {saving ? "Updating…" : "Update case disposition"}
+          </CrmButton>
+        </form>
+      ) : (
+        <p className="mt-2 text-xs text-ks-muted">Case closed on record.</p>
+      )}
+    </article>
   );
 }
 
@@ -441,7 +544,7 @@ function Field({
     <label className="block">
       <span className="text-xs text-ks-muted">{label}</span>
       <input
-        className="mt-1 w-full rounded-lg border border-ks-outline bg-ks-bg px-3 py-2 text-sm outline-none focus:border-ks-primary-container disabled:bg-transparent"
+        className="ks-input mt-1 disabled:border-transparent disabled:bg-transparent disabled:px-0"
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

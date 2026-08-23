@@ -7,18 +7,20 @@ import { Icon } from "@/components/stitch/Icon";
 import {
   type Call,
   isInbound,
-  isLive,
+  isCallLive,
   jsonSafe,
   when,
 } from "@/components/stitch/crm";
 
 export default function LiveCallsPage() {
   const [calls, setCalls] = useState<Call[]>([]);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/crm/calls");
+    const res = await fetch(`/api/crm/calls?_=${Date.now()}`, { cache: "no-store" });
     const data = await jsonSafe(res);
     setCalls((data.calls as Call[]) ?? []);
+    setUpdatedAt((data.at as string) ?? new Date().toISOString());
   }, []);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function LiveCallsPage() {
     return () => clearInterval(t);
   }, [load]);
 
-  const live = calls.filter((c) => isLive(c.status));
+  const live = calls.filter((c) => isCallLive(c));
   const hot = calls.filter((c) =>
     /escalat|expert|fail/i.test(`${c.disposition} ${c.status}`),
   );
@@ -63,7 +65,12 @@ export default function LiveCallsPage() {
       <div className="overflow-hidden rounded-xl border border-ks-outline bg-ks-surface shadow-sm">
         <div className="flex items-center justify-between border-b border-ks-outline p-4">
           <p className="text-sm font-medium">All directions</p>
-          <span className="text-sm text-ks-muted">{calls.length} logged</span>
+          <span className="text-sm text-ks-muted">
+            {calls.length} logged
+            {updatedAt
+              ? ` · updated ${new Date(updatedAt).toLocaleTimeString("en-IN", { hour12: true })}`
+              : ""}
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -88,7 +95,7 @@ export default function LiveCallsPage() {
               ) : (
                 calls.map((call) => {
                   const inbound = isInbound(call.direction);
-                  const liveCall = isLive(call.status);
+                  const liveCall = isCallLive(call);
                   const alert = /escalat|expert|fail/i.test(
                     `${call.disposition} ${call.status}`,
                   );

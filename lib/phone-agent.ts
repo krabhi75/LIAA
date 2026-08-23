@@ -209,6 +209,9 @@ export async function persistPhoneTurn(
       lastSpeech: speech,
       transcript,
       disposition: turn.hangup ? "completed" : call.disposition,
+      ...(turn.hangup
+        ? { status: "ended", endedAt: new Date().toISOString() }
+        : {}),
     });
     await upsertCaseFromCall({
       phone: call.phone,

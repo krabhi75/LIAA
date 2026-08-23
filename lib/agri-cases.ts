@@ -295,12 +295,18 @@ export async function escalateAgriCase(
 export async function setAgriCaseStatus(
   id: string,
   status: string,
+  escalateReason?: string,
 ): Promise<AgriCaseRow | null> {
   if (prismaConfigured()) {
     try {
       const saved = await prisma.agriCase.update({
         where: { id },
-        data: { status },
+        data: {
+          status,
+          ...(escalateReason !== undefined
+            ? { escalateReason }
+            : {}),
+        },
       });
       return serialize(saved);
     } catch (e) {
@@ -310,9 +316,34 @@ export async function setAgriCaseStatus(
   const rows = mem();
   const i = rows.findIndex((r) => r.id === id);
   if (i < 0) return null;
-  rows[i] = { ...rows[i], status };
+  rows[i] = {
+    ...rows[i],
+    status,
+    ...(escalateReason !== undefined ? { escalateReason } : {}),
+  };
   persist(rows);
   return rows[i];
+}
+
+export async function resolveAgriCase(
+  id: string,
+  disposition: string,
+  note?: string,
+): Promise<AgriCaseRow | null> {
+  const status =
+    disposition === "follow_up"
+      ? "open"
+      : disposition === "duplicate"
+        ? "closed"
+        : disposition === "escalated"
+          ? "escalated"
+          : ["resolved", "completed", "closed"].includes(disposition)
+            ? disposition
+            : "closed";
+  const reason = note?.trim()
+    ? `${disposition}: ${note.trim()}`
+    : disposition;
+  return setAgriCaseStatus(id, status, reason);
 }
 
 function guessCrop(text: string): string {

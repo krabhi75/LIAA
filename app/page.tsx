@@ -2,52 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Shell } from "@/components/stitch/Shell";
-import { Icon } from "@/components/stitch/Icon";
 import {
   type AgriCase,
   type Call,
   type Contact,
   isInbound,
-  isLive,
+  isCallLive,
   jsonSafe,
   when,
 } from "@/components/stitch/crm";
-
-function Card({
-  label,
-  value,
-  hint,
-  icon,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  hint: string;
-  icon: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-[0_2px_4px_rgba(0,0,0,0.04)] ${accent ? "relative overflow-hidden" : ""}`}
-    >
-      {accent ? (
-        <div className="absolute bottom-0 left-0 top-0 w-1 bg-ks-secondary" />
-      ) : null}
-      <div className={`flex items-start justify-between ${accent ? "pl-2" : ""}`}>
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-ks-muted">
-          {label}
-        </p>
-        <span className="rounded-md bg-ks-low p-1 text-ks-primary-container">
-          <Icon name={icon} />
-        </span>
-      </div>
-      <h3 className={`ks-display mt-2 text-3xl font-semibold ${accent ? "pl-2" : ""}`}>
-        {value}
-      </h3>
-      <p className={`mt-1 text-sm text-ks-muted ${accent ? "pl-2" : ""}`}>{hint}</p>
-    </div>
-  );
-}
+import { MetricTile, PageHeader } from "@/components/stitch/crm-ui";
 
 async function fetchCrm(path: string) {
   const res = await fetch(`${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`, {
@@ -61,7 +25,6 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [cases, setCases] = useState<AgriCase[]>([]);
-  const [hello, setHello] = useState("Good evening");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -86,17 +49,6 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const hour = Number(
-      new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Kolkata",
-        hour: "numeric",
-        hour12: false,
-      }).format(new Date()),
-    );
-    if (hour < 12) setHello("Good morning");
-    else if (hour < 17) setHello("Good afternoon");
-    else setHello("Good evening");
-
     void load();
     const t = setInterval(() => void load(), 3000);
     const onFocus = () => void load();
@@ -110,7 +62,7 @@ export default function DashboardPage() {
     };
   }, [load]);
 
-  const live = calls.filter((c) => isLive(c.status)).length;
+  const live = calls.filter((c) => isCallLive(c)).length;
   const inbound = calls.filter((c) => isInbound(c.direction)).length;
   const outbound = calls.length - inbound;
   const escalated = cases.filter((c) => c.status === "escalated").length;
@@ -124,12 +76,12 @@ export default function DashboardPage() {
   const lastCall = calls[0];
 
   const funnelMax = Math.max(calls.length, cases.length, 1);
+  // True nest: calls → cases → still open → expert (closed is exit, not a deeper stage)
   const funnel = [
     { label: "Total calls", value: calls.length },
-    { label: "Inbound conversations", value: inbound },
     { label: "Cases opened", value: cases.length },
-    { label: "Closed / resolved", value: closed },
-    { label: "Expert required", value: escalated },
+    { label: "Still open", value: open },
+    { label: "Expert escalated", value: escalated },
   ];
 
   const crops = useMemo(() => {
@@ -168,81 +120,60 @@ export default function DashboardPage() {
 
   return (
     <Shell title="Overview">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="ks-display text-3xl font-bold text-ks-on-surface md:text-4xl">
-            {hello}, Abhishek
-          </h2>
-          <p className="mt-2 max-w-3xl text-base text-ks-muted md:text-lg">
-            Live field operations across Liaa voice, inbound DID, and outbound CRM
-            dials.
-          </p>
-        </div>
-        <div className="text-right text-sm text-ks-muted">
-          <p>
-            {loading ? "Loading…" : "Live CRM"} · refreshes every 3s
-          </p>
-          <p>{updatedAt ? `Updated ${when(updatedAt)}` : "—"}</p>
-          {error ? <p className="text-ks-error">{error}</p> : null}
-          <button
-            type="button"
-            className="mt-1 text-ks-primary underline"
-            onClick={() => void load()}
-          >
-            Refresh now
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Operations dashboard"
+        title="Field intelligence"
+        description="Live metrics from farmers, calls, and agri cases across Liaa voice and CRM dials."
+        meta={
+          <div className="text-right text-xs text-ks-muted">
+            <p>{loading ? "Syncing…" : "Auto-refresh · 3s"}</p>
+            <p>{updatedAt ? `Updated ${when(updatedAt)}` : "—"}</p>
+            {error ? <p className="text-ks-error">{error}</p> : null}
+            <button
+              type="button"
+              className="mt-1 font-semibold text-ks-primary-container hover:underline"
+              onClick={() => void load()}
+            >
+              Refresh
+            </button>
+          </div>
+        }
+      />
 
-      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card
-          label="Total farmers"
-          value={contacts.length}
-          hint="From /api/crm/contacts"
-          icon="groups"
-        />
-        <Card
-          label="Calls logged"
+      <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <MetricTile label="Farmers" value={contacts.length} hint="CRM registry" />
+        <MetricTile
+          label="Calls"
           value={calls.length}
-          hint={`${inbound} inbound · ${outbound} outbound`}
-          icon="call"
+          hint={`${inbound} in · ${outbound} out`}
         />
-        <Card
+        <MetricTile
           label="Live now"
           value={live}
-          hint="Queued, ringing, or in progress"
-          icon="graphic_eq"
-          accent
+          hint="Active legs"
+          tone="live"
         />
-        <Card
-          label="Expert escalations"
-          value={escalated}
-          hint="Human agri expert needed"
-          icon="record_voice_over"
-        />
-        <Card
+        <MetricTile label="Escalations" value={escalated} hint="Expert queue" tone="warn" />
+        <MetricTile
           label="Open cases"
           value={open}
-          hint={`${cases.length} total · ${closed} closed`}
-          icon="folder_open"
+          hint={`${closed} closed`}
         />
-        <Card
+        <MetricTile
           label="Last activity"
           value={lastCall ? when(lastCall.startedAt) : "—"}
-          hint={
-            lastCall
-              ? `${lastCall.phone} · ${lastCall.status}`
-              : "No calls yet"
-          }
-          icon="schedule"
+          hint={lastCall ? lastCall.phone : "No calls yet"}
         />
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 shadow-[0_2px_4px_rgba(0,0,0,0.04)] lg:col-span-8">
-          <h3 className="ks-display text-xl font-semibold">Call mix</h3>
-          <p className="text-sm text-ks-muted">Inbound vs outbound from live CRM</p>
-          <div className="mt-8 flex h-48 items-end gap-8 px-4">
+        <div className="ks-record-panel lg:col-span-8">
+          <div className="ks-record-panel__head">
+            <h3 className="ks-record-panel__title">Call mix</h3>
+          </div>
+          <div className="ks-record-panel__body">
+            <p className="mb-6 text-sm text-ks-muted">Inbound vs outbound from live CRM</p>
+            <div className="flex h-48 items-end gap-8 px-4">
             <Bar label="Inbound" h={inbound} max={funnelMax} color="bg-ks-primary" />
             <Bar
               label="Outbound"
@@ -257,24 +188,27 @@ export default function DashboardPage() {
               max={funnelMax}
               color="bg-ks-primary-container"
             />
+            </div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 shadow-[0_2px_4px_rgba(0,0,0,0.04)] lg:col-span-4">
-          <h3 className="ks-display text-xl font-semibold">Escalation funnel</h3>
-          <p className="mb-4 text-sm text-ks-muted">Widths follow live counts</p>
-          {funnel.map((step) => (
-            <FunnelStep
-              key={step.label}
-              label={step.label}
-              value={step.value}
-              pct={Math.max(18, Math.round((step.value / funnelMax) * 100))}
-            />
-          ))}
+        <div className="ks-record-panel lg:col-span-4">
+          <div className="ks-record-panel__head">
+            <h3 className="ks-record-panel__title">Escalation funnel</h3>
+          </div>
+          <div className="ks-record-panel__body">
+          <p className="mb-5 text-sm text-ks-muted">
+            Call → case → open / close → expert
+          </p>
+          <EscalationFunnel steps={funnel} max={funnelMax} closed={closed} />
+          </div>
         </div>
 
-        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 lg:col-span-6">
-          <h3 className="ks-display mb-4 text-xl font-semibold">Top farmer issues</h3>
+        <div className="ks-record-panel lg:col-span-6">
+          <div className="ks-record-panel__head">
+            <h3 className="ks-record-panel__title">Top farmer issues</h3>
+          </div>
+          <div className="ks-record-panel__body">
           {issues.every((i) => i.n === 0) ? (
             <p className="text-sm text-ks-muted">
               Issues fill in as farmers speak on the call.
@@ -299,10 +233,14 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+          </div>
         </div>
 
-        <div className="rounded-xl border border-ks-outline bg-ks-surface p-6 lg:col-span-6">
-          <h3 className="ks-display mb-4 text-xl font-semibold">Crop focus</h3>
+        <div className="ks-record-panel lg:col-span-6">
+          <div className="ks-record-panel__head">
+            <h3 className="ks-record-panel__title">Crop focus</h3>
+          </div>
+          <div className="ks-record-panel__body">
           {crops.length === 0 ? (
             <p className="text-sm text-ks-muted">Crops appear from case intake.</p>
           ) : (
@@ -321,6 +259,7 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </section>
     </Shell>
@@ -348,21 +287,73 @@ function Bar({
   );
 }
 
-function FunnelStep({
-  label,
-  value,
-  pct,
+/** Fixed trapezoid widths so the chart always reads as a funnel; counts are live. */
+const FUNNEL_WIDTHS = [100, 82, 64, 46] as const;
+const FUNNEL_TONES = [
+  "bg-[#032d60] text-white",
+  "bg-[#0176d3] text-white",
+  "bg-[#014486] text-white",
+  "bg-ks-secondary text-white",
+] as const;
+
+function EscalationFunnel({
+  steps,
+  max,
+  closed,
 }: {
-  label: string;
-  value: number;
-  pct: number;
+  steps: { label: string; value: number }[];
+  max: number;
+  closed: number;
 }) {
   return (
-    <div className="mx-auto mb-2" style={{ width: `${pct}%` }}>
-      <div className="flex items-center justify-between rounded-lg border border-ks-outline bg-ks-low px-3 py-2">
-        <span className="text-sm">{label}</span>
-        <span className="text-sm font-bold text-ks-primary">{value}</span>
+    <div>
+      <div className="ks-funnel flex flex-col items-center">
+        {steps.map((step, i) => {
+          const width = FUNNEL_WIDTHS[Math.min(i, FUNNEL_WIDTHS.length - 1)]!;
+          const tone = FUNNEL_TONES[Math.min(i, FUNNEL_TONES.length - 1)]!;
+          const share = max > 0 ? Math.round((step.value / max) * 100) : 0;
+          const prev = i > 0 ? steps[i - 1]!.value : null;
+          const drop =
+            prev != null && prev > 0
+              ? Math.round((step.value / prev) * 100)
+              : null;
+          return (
+            <div
+              key={step.label}
+              className="ks-funnel-step relative flex w-full flex-col items-center"
+              style={{ width: `${width}%` }}
+            >
+              <div
+                className={`ks-funnel-band flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-4 py-3 ${tone}`}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] font-medium uppercase tracking-wide opacity-90">
+                    {step.label}
+                  </p>
+                  {drop != null ? (
+                    <p className="text-[10px] opacity-75">{drop}% of prior stage</p>
+                  ) : (
+                    <p className="text-[10px] opacity-75">{share}% of funnel top</p>
+                  )}
+                </div>
+                <span className="ks-display shrink-0 text-2xl font-semibold tabular-nums leading-none">
+                  {step.value}
+                </span>
+              </div>
+              {i < steps.length - 1 ? (
+                <div
+                  className="ks-funnel-gap h-1.5 w-full bg-transparent"
+                  aria-hidden
+                />
+              ) : null}
+            </div>
+          );
+        })}
       </div>
+      <p className="mt-4 text-center text-xs text-ks-muted">
+        Closed / resolved (exit):{" "}
+        <span className="font-semibold text-ks-primary">{closed}</span>
+      </p>
     </div>
   );
 }

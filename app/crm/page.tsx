@@ -10,10 +10,16 @@ import {
   type Call,
   type Contact,
   initials,
-  isLive,
+  isCallLive,
   jsonSafe,
   when,
 } from "@/components/stitch/crm";
+import {
+  DataTableShell,
+  MetricTile,
+  PageHeader,
+  StatusBadge,
+} from "@/components/stitch/crm-ui";
 
 export default function FarmersPage() {
   const router = useRouter();
@@ -146,67 +152,60 @@ export default function FarmersPage() {
     router.push(`/crm/farmers/${c.id}`);
   }
 
-  const liveCount = calls.filter((c) => isLive(c.status)).length;
+  const liveCount = calls.filter((c) => isCallLive(c)).length;
 
   return (
     <Shell title="Farmers">
-      <div className="mb-6">
-        <h1 className="ks-display text-3xl font-semibold">Farmers registry</h1>
-        <p className="mt-1 text-sm text-ks-muted">
-          Manage field partners. Inbound on +91 79714 43138 creates a farmer
-          automatically.
-        </p>
-        <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          <strong>CRM Call</strong> uses Vobiz KrishiSaathi (Polly.Aditi Hindi).
-          It updates this dashboard and{" "}
-          <Link href="/crm/calls" className="underline">
-            /crm/calls
-          </Link>
-          , not Agora Campaign stats. For Agora outbound analytics, dial from{" "}
-          <strong>Agora Console → Campaigns</strong>. See{" "}
-          <a
-            className="underline"
-            href="https://github.com/krabhi75/LIAA/blob/main/docs/OUTBOUND_PATHS.md"
-            target="_blank"
-            rel="noreferrer"
-          >
-            OUTBOUND_PATHS.md
-          </a>
-          .
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="CRM registry"
+        title="Farmers"
+        description="Manage field partners, outbound dials, and case intake from voice calls."
+        meta={
+          <div className="flex gap-2">
+            <MetricTile label="Registry" value={contacts.length} />
+            <MetricTile label="Live" value={liveCount} tone="live" />
+          </div>
+        }
+      />
+
+      <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+        <strong>CRM Call</strong> uses Vobiz KrishiSaathi (Polly.Aditi). For Agora
+        campaign analytics, use{" "}
+        <strong>Agora Console → Campaigns</strong>.
+      </p>
 
       <form
         id="dialer"
-        className="mb-4 rounded-xl border border-ks-outline bg-ks-surface p-4 shadow-sm"
+        className="ks-record-panel mb-4"
         onSubmit={(e) => void addAndCall(e)}
       >
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ks-muted">
-          Add farmer / outbound dialer
-        </p>
+        <div className="ks-record-panel__head">
+          <h3 className="ks-record-panel__title">Quick dialer</h3>
+        </div>
+        <div className="ks-record-panel__body">
         <div className="flex flex-wrap gap-3">
           <input
-            className="rounded-lg border border-ks-outline bg-ks-bg px-4 py-2.5 text-sm outline-none focus:border-ks-primary-container"
+            className="ks-input min-w-[180px] flex-1"
             placeholder="Farmer name (optional)"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <input
-            className="rounded-lg border border-ks-outline bg-ks-bg px-4 py-2.5 text-sm outline-none focus:border-ks-primary-container"
+            className="ks-input min-w-[180px] flex-1"
             placeholder="Mobile +91…"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required
           />
           <button
-            className="rounded-lg bg-ks-primary-container px-4 py-2.5 text-sm font-medium text-white hover:bg-ks-primary disabled:opacity-40"
+            className="ks-btn ks-btn--brand"
             type="submit"
             disabled={Boolean(dialing)}
           >
             {dialing ? "Dialing…" : "Save & call"}
           </button>
           <button
-            className="rounded-lg border border-ks-primary px-4 py-2.5 text-sm font-medium text-ks-primary hover:bg-ks-low"
+            className="ks-btn ks-btn--secondary"
             type="button"
             disabled={!phone}
             onClick={(e) => void saveOnly(e)}
@@ -215,23 +214,25 @@ export default function FarmersPage() {
           </button>
         </div>
         {error ? <p className="mt-3 text-sm text-ks-error">{error}</p> : null}
+        </div>
       </form>
 
-      <div className="mb-4 rounded-xl border border-ks-outline bg-ks-surface p-4">
+      <div className="ks-record-panel mb-4">
+        <div className="ks-record-panel__body">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ks-muted">
               <Icon name="search" />
             </span>
             <input
-              className="w-full rounded-lg border border-ks-outline bg-ks-bg py-2.5 pl-10 pr-4 text-sm outline-none focus:border-ks-primary-container"
+              className="ks-input py-2.5 pl-10"
               placeholder="Search farmers by name or phone…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
           <select
-            className="rounded-lg border border-ks-outline bg-ks-bg px-3 py-2.5 text-sm"
+            className="ks-select md:w-48"
             value={crop}
             onChange={(e) => setCrop(e.target.value)}
           >
@@ -243,12 +244,25 @@ export default function FarmersPage() {
             ))}
           </select>
         </div>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-ks-outline bg-ks-surface shadow-sm">
-        <div className="overflow-x-auto">
+      <DataTableShell
+        title="Farmer accounts"
+        subtitle={`${rows.length} shown · ${contacts.length} total`}
+        footer={
+          <>
+            <span>
+              {liveCount} live call{liveCount === 1 ? "" : "s"} right now
+            </span>
+            <Link href="/crm/calls" className="font-semibold text-ks-primary-container hover:underline">
+              Open live calls monitor
+            </Link>
+          </>
+        }
+      >
           <table className="w-full border-collapse text-left text-sm">
-            <thead className="bg-ks-low text-[12px] font-semibold uppercase tracking-wider text-ks-muted">
+            <thead className="border-b border-ks-line bg-ks-low text-[11px] font-semibold uppercase tracking-wider text-ks-muted">
               <tr>
                 <th className="px-4 py-3">Farmer</th>
                 <th className="px-4 py-3">Contact</th>
@@ -275,7 +289,7 @@ export default function FarmersPage() {
                   );
                   const village = related[0]?.village || related[0]?.district || "—";
                   const cropName = related[0]?.crop || "—";
-                  const live = last ? isLive(last.status) : false;
+                  const live = last ? isCallLive(last) : false;
                   return (
                     <tr
                       key={c.id}
@@ -315,22 +329,14 @@ export default function FarmersPage() {
                         )}
                       </td>
                       <td className="px-4 py-2">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs ${
-                            live
-                              ? "border-ks-error/30 bg-ks-error-soft text-ks-error"
-                              : "border-ks-mint/50 bg-ks-mint/20 text-ks-primary"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${live ? "bg-ks-error" : "bg-ks-primary"}`}
-                          />
-                          {live ? "Live" : "Active"}
-                        </span>
+                        <StatusBadge
+                          label={live ? "Live" : "Active"}
+                          tone={live ? "live" : "success"}
+                        />
                       </td>
                       <td className="px-4 py-2 text-right">
                         <button
-                          className="rounded-lg border border-ks-primary px-3 py-1 text-xs font-medium text-ks-primary hover:bg-ks-low"
+                          className="ks-btn ks-btn--secondary px-3 py-1 text-xs"
                           type="button"
                           disabled={Boolean(dialing)}
                           onClick={(e) => {
@@ -347,16 +353,7 @@ export default function FarmersPage() {
               )}
             </tbody>
           </table>
-        </div>
-        <div className="flex items-center justify-between border-t border-ks-line bg-ks-low px-4 py-3 text-sm text-ks-muted">
-          <span>
-            Showing {rows.length} of {contacts.length} farmers · {liveCount} live
-          </span>
-          <Link href="/crm/calls" className="text-ks-primary hover:underline">
-            Open live calls
-          </Link>
-        </div>
-      </div>
+      </DataTableShell>
     </Shell>
   );
 }

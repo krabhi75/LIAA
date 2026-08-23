@@ -408,9 +408,77 @@ export async function upsertFarmerFacts(
   });
 }
 
+const LIVE_CALL_STATUSES = ["queued", "ringing", "dialing", "in-progress"] as const;
+const PRE_ANSWER_STALE_MS = 5 * 60 * 1000;
+const IN_PROGRESS_STALE_MS = 25 * 60 * 1000;
+
+function isStaleLiveCall(call: StoredCall, now = Date.now()): boolean {
+  if (call.endedAt) return false;
+  if (!LIVE_CALL_STATUSES.includes(call.status as (typeof LIVE_CALL_STATUSES)[number])) {
+    return false;
+  }
+  const anchor = call.answeredAt || call.startedAt;
+  const ageMs = now - new Date(anchor).getTime();
+  if (Number.isNaN(ageMs)) return false;
+  if (["queued", "ringing", "dialing"].includes(call.status)) {
+    return ageMs > PRE_ANSWER_STALE_MS;
+  }
+  return ageMs > IN_PROGRESS_STALE_MS;
+}
+
+/** Close legs that never received a hangup webhook (common on short / failed PSTN). */
+export async function reconcileStaleCalls(): Promise<number> {
+  const nowIsoStr = nowIso();
+  let closed = 0;
+
+  if (prismaOk()) {
+    try {
+      const rows = await prisma.crmCall.findMany({
+        where: { status: { in: [...LIVE_CALL_STATUSES] }, endedAt: null },
+      });
+      for (const row of rows) {
+        const call = serializePrismaCall(row);
+        if (!isStaleLiveCall(call)) continue;
+        await prisma.crmCall.update({
+          where: { id: row.id },
+          data: {
+            status: "ended",
+            endedAt: new Date(nowIsoStr),
+            disposition: row.disposition === "dialing" ? "no-answer" : "completed",
+            hangupCause: row.hangupCause || "STALE_RECONCILE",
+          },
+        });
+        closed += 1;
+      }
+      if (closed) return closed;
+    } catch (e) {
+      logPrisma("reconcileStaleCalls", e);
+    }
+  }
+
+  const bag = mem();
+  let dirty = false;
+  const nextCalls = bag.calls.map((call) => {
+    if (!isStaleLiveCall(call)) return call;
+    dirty = true;
+    closed += 1;
+    return {
+      ...call,
+      status: "ended",
+      endedAt: nowIsoStr,
+      disposition: call.disposition === "dialing" ? "no-answer" : "completed",
+      hangupCause: call.hangupCause || "STALE_RECONCILE",
+    };
+  });
+  if (dirty) persist({ ...bag, calls: nextCalls });
+  return closed;
+}
+
 export async function listCalls(): Promise<
   (StoredCall & { contact: { name: string; id: string } | null })[]
 > {
+  await reconcileStaleCalls();
+
   if (prismaOk()) {
     try {
       const rows = await prisma.crmCall.findMany({

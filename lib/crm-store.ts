@@ -524,6 +524,49 @@ export async function findCallByUuid(uuid: string): Promise<StoredCall | null> {
   return mem().calls.find((k) => k.vobizUuid === uuid) ?? null;
 }
 
+/** Vobiz answer sends CallUUID; REST dial stores request_uuid — match both + recent ringing leg. */
+export async function findCallForVobizWebhook(opts: {
+  callUuid?: string;
+  requestUuid?: string;
+  calleePhone?: string;
+}): Promise<StoredCall | null> {
+  for (const id of [opts.callUuid, opts.requestUuid]) {
+    if (id) {
+      const hit = await findCallByUuid(id);
+      if (hit) return hit;
+    }
+  }
+  const phone = opts.calleePhone?.trim();
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  const matchPhone = (p: string) => {
+    const d = p.replace(/\D/g, "");
+    return d === digits || d.endsWith(digits.slice(-10)) || digits.endsWith(d.slice(-10));
+  };
+  if (prismaOk()) {
+    try {
+      const k = await prisma.crmCall.findFirst({
+        where: {
+          direction: "outbound",
+          status: { in: ["queued", "ringing", "in-progress"] },
+        },
+        orderBy: { startedAt: "desc" },
+      });
+      if (k && matchPhone(k.phone)) return serializePrismaCall(k);
+    } catch (e) {
+      logPrisma("prisma", e);
+    }
+  }
+  return (
+    mem().calls.find(
+      (k) =>
+        k.direction === "outbound" &&
+        ["queued", "ringing", "in-progress"].includes(k.status) &&
+        matchPhone(k.phone),
+    ) ?? null
+  );
+}
+
 export async function updateCall(
   id: string,
   data: Partial<Omit<StoredCall, "id" | "startedAt">>,

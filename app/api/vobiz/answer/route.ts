@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import {
   KRISHI_ANSWER_GREETING,
-  answerSpeakGatherXml,
+  speakGatherXml,
   voiceBase,
   xmlResponse,
 } from "@/lib/vobiz-xml";
@@ -13,7 +13,29 @@ export const maxDuration = 10;
 /** Instant Voice XML — no Prisma / agora-agents imports on this path. */
 function answerXml(req: Request): Response {
   const action = `${voiceBase(req)}/api/vobiz/gather`;
-  return xmlResponse(answerSpeakGatherXml(KRISHI_ANSWER_GREETING, action));
+  return xmlResponse(speakGatherXml(KRISHI_ANSWER_GREETING, action));
+}
+
+async function markAnswered(params: Record<string, string>) {
+  const { normalizePhone } = await import("@/lib/vobiz");
+  const { findCallForVobizWebhook, updateCall } = await import("@/lib/crm-store");
+
+  const callUuid = params.CallUUID || params.call_uuid || "";
+  const requestUuid = params.RequestUUID || params.request_uuid || "";
+  const to = normalizePhone(params.To || params.to || "");
+
+  const existing = await findCallForVobizWebhook({
+    callUuid,
+    requestUuid,
+    calleePhone: to,
+  });
+  if (!existing) return;
+
+  await updateCall(existing.id, {
+    status: "in-progress",
+    answeredAt: new Date().toISOString(),
+    vobizUuid: callUuid || requestUuid || existing.vobizUuid,
+  });
 }
 
 export async function POST(req: Request) {
@@ -23,22 +45,8 @@ export async function POST(req: Request) {
     void (async () => {
       try {
         const { parseVobizBody } = await import("@/lib/vobiz");
-        const { findCallByUuid, updateCall } = await import("@/lib/crm-store");
-        const { ingestCallWebhook, flattenWebhook } = await import(
-          "@/lib/crm-ingest"
-        );
         const params = await parseVobizBody(clone);
-        const uuid = params.CallUUID || params.RequestUUID || "";
-        if (!uuid) return;
-        const existing = await findCallByUuid(uuid);
-        if (existing) {
-          await updateCall(existing.id, {
-            status: "in-progress",
-            answeredAt: new Date().toISOString(),
-          });
-          return;
-        }
-        await ingestCallWebhook("vobiz", flattenWebhook(params));
+        await markAnswered(params);
       } catch (err) {
         console.error("[vobiz/answer] persist failed", err);
       }

@@ -2,17 +2,11 @@
  * Zero-dependency Vobiz Voice XML helpers.
  * Answer/Gather must never import Prisma or agora-agents — that cold-starts and drops PSTN legs.
  *
- * Keep XML minimal. Invalid Speak language, unsupported Gather ASR, or Record on answer
- * has caused NORMAL_CLEARING hangup within ~1s of answer webhook (see CRM answeredAt=null).
+ * Proven shape (eb23980): Speak nested INSIDE Gather, en-US TTS, en-IN ASR, Redirect on miss.
  */
 
 export const VOBIZ_PUBLIC_ORIGIN = "https://liaa-ebon.vercel.app";
 
-/**
- * Speak: only documented WOMAN/MAN + Speak languages.
- * en-IN / hi-IN are NOT in the Speak language table — they can drop the call.
- * (Gather ASR can use other codes; Speak cannot.)
- */
 export const VOBIZ_TTS_VOICE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_VOICE?.trim()) ||
   "WOMAN";
@@ -20,20 +14,15 @@ export const VOBIZ_TTS_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_TTS_LANGUAGE?.trim()) ||
   "en-US";
 
-/**
- * Gather ASR — start with en-US (always listed). hi-IN can be set via env once the
- * account’s ASR pack is confirmed; unsupported Gather language also drops the leg.
- */
+/** Gather ASR — en-IN worked on this Vobiz account; hi-IN has dropped legs. */
 export const VOBIZ_STT_LANGUAGE =
   (typeof process !== "undefined" && process.env.VOBIZ_STT_LANGUAGE?.trim()) ||
-  "en-US";
+  "en-IN";
 
-/** Kept for compatibility; not emitted on Gather while debugging disconnects. */
 export const VOBIZ_SPEECH_MODEL = "phone_call";
 export const VOBIZ_GATHER_HINTS =
   "namaste,naam,mera,main,gaon,shahar,district,zila,fasal,gehun,kapas,dhan,mausam,baarish,theek,haan,nahi,ji,madad,problem";
 
-/** Roman Hindi / English — ASCII only. */
 export const KRISHI_ANSWER_GREETING =
   "Namaste, main KrishiSaathi hoon. Main aapki kheti mein madad karta hoon. Sabse pehle aapka naam kya hai?";
 
@@ -72,38 +61,22 @@ export function speakXml(text: string): string {
   return `<Speak voice="${xmlEscape(voice)}" language="${xmlEscape(lang)}">${xmlEscape(text)}</Speak>`;
 }
 
-function gatherInner(prompt: string, actionUrl: string): string {
-  const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
-  // Minimal Gather — no hints, no speechModel, no Record (those have dropped India outbound).
-  return (
-    speakXml(prompt) +
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${xmlEscape(VOBIZ_STT_LANGUAGE)}" executionTimeout="30">` +
-    speakXml("Boliye.") +
-    `</Gather>` +
-    speakXml(KRISHI_NO_HEAR) +
-    `<Redirect>${xmlEscape(answerUrl)}</Redirect>`
-  );
-}
-
 /**
- * Answer URL XML — Speak first (so audio starts), then Gather.
- * No session Record here; recording can be re-added after the leg stays up.
+ * Single Speak inside Gather — do NOT put Speak before Gather (Vobiz drops the leg).
+ * No Record until outbound stays connected reliably.
  */
-export function answerSpeakGatherXml(
-  prompt: string,
-  actionUrl: string,
-): string {
+export function speakGatherXml(prompt: string, actionUrl: string): string {
+  const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<Response>` +
-    gatherInner(prompt, actionUrl) +
+    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${xmlEscape(VOBIZ_STT_LANGUAGE)}" speechModel="${VOBIZ_SPEECH_MODEL}" speechEndTimeout="auto" executionTimeout="15">` +
+    speakXml(prompt) +
+    `</Gather>` +
+    speakXml(KRISHI_NO_HEAR) +
+    `<Redirect>${xmlEscape(answerUrl)}</Redirect>` +
     `</Response>`
   );
-}
-
-/** Gather / turn replies — same minimal pattern. */
-export function speakGatherXml(prompt: string, actionUrl: string): string {
-  return answerSpeakGatherXml(prompt, actionUrl);
 }
 
 export function hangupXml(message: string): string {
@@ -117,8 +90,7 @@ export function xmlResponse(xml: string): Response {
   return new Response(xml, {
     status: 200,
     headers: {
-      // Plivo/Vobiz parsers accept both; application/xml is the safer default.
-      "Content-Type": "application/xml; charset=utf-8",
+      "Content-Type": "text/xml; charset=utf-8",
       "Cache-Control": "no-store",
     },
   });

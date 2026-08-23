@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   KRISHI_ANSWER_GREETING,
-  answerSpeakGatherXml,
+  speakGatherXml,
   voiceBase,
 } from "@/lib/vobiz-xml";
 
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  */
 export async function GET(req: Request) {
   const action = `${voiceBase(req)}/api/vobiz/gather`;
-  const xml = answerSpeakGatherXml(KRISHI_ANSWER_GREETING, action);
+  const xml = speakGatherXml(KRISHI_ANSWER_GREETING, action);
   return NextResponse.json({
     ok: true,
     warmed: true,

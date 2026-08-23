@@ -1,4 +1,6 @@
 import { after } from "next/server";
+import { handlePhoneSpeechFast } from "@/lib/phone-agent";
+import { parseVobizBody, speechFromVobizParams } from "@/lib/vobiz";
 import {
   hangupXml,
   speakGatherXml,
@@ -12,18 +14,13 @@ export const maxDuration = 10;
 
 /**
  * Gather must return XML in ~1s. All CRM / weather / tools run in after().
- * Awaiting Open-Meteo or Prisma here drops the PSTN leg.
  */
 export async function POST(req: Request) {
   const action = `${voiceBase(req)}/api/vobiz/gather`;
-  let params: Record<string, string> = {};
   try {
-    const { parseVobizBody, speechFromVobizParams } = await import("@/lib/vobiz");
-    params = await parseVobizBody(req);
+    const params = await parseVobizBody(req);
     const uuid = params.CallUUID || params.RequestUUID || "phone";
     const speech = speechFromVobizParams(params);
-
-    const { handlePhoneSpeechFast } = await import("@/lib/phone-agent");
     const turn = handlePhoneSpeechFast(uuid, speech);
 
     const response = turn.hangup

@@ -1,72 +1,54 @@
 import { after } from "next/server";
-import { voicePublicBase } from "@/lib/agora";
-import { handlePhoneSpeech, persistPlaceWeather } from "@/lib/phone-agent";
 import {
   hangupXml,
-  parseVobizBody,
   speakGatherXml,
-  speechFromVobizParams,
+  voiceBase,
   xmlResponse,
-} from "@/lib/vobiz";
-import { findCallByUuid, updateCall } from "@/lib/crm-store";
-import { upsertCaseFromCall } from "@/lib/agri-cases";
+} from "@/lib/vobiz-xml";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 10;
 
+/**
+ * Gather must return XML in ~1s. All CRM / weather / tools run in after().
+ * Awaiting Open-Meteo or Prisma here drops the PSTN leg.
+ */
 export async function POST(req: Request) {
-  const action = `${voicePublicBase(req)}/api/vobiz/gather`;
-  const params = await parseVobizBody(req);
-  const uuid = params.CallUUID || params.RequestUUID || "phone";
-  const speech = speechFromVobizParams(params);
-
-  let turn: Awaited<ReturnType<typeof handlePhoneSpeech>>;
+  const action = `${voiceBase(req)}/api/vobiz/gather`;
+  let params: Record<string, string> = {};
   try {
-    turn = await handlePhoneSpeech(uuid, speech);
+    const { parseVobizBody, speechFromVobizParams } = await import("@/lib/vobiz");
+    params = await parseVobizBody(req);
+    const uuid = params.CallUUID || params.RequestUUID || "phone";
+    const speech = speechFromVobizParams(params);
+
+    const { handlePhoneSpeechFast } = await import("@/lib/phone-agent");
+    const turn = handlePhoneSpeechFast(uuid, speech);
+
+    const response = turn.hangup
+      ? xmlResponse(hangupXml(turn.speak))
+      : xmlResponse(speakGatherXml(turn.speak, action));
+
+    after(() => {
+      void (async () => {
+        try {
+          const { persistPhoneTurn } = await import("@/lib/phone-agent");
+          await persistPhoneTurn(uuid, speech, turn);
+        } catch (err) {
+          console.error("[vobiz/gather] persist failed", err);
+        }
+      })();
+    });
+
+    return response;
   } catch (err) {
-    console.error("[vobiz/gather] turn failed", err);
+    console.error("[vobiz/gather]", err);
     return xmlResponse(
-      speakGatherXml("आवाज़ साफ़ नहीं आई। हिंदी या हिंग्लिश में दोबारा बोलिए।", action),
+      speakGatherXml(
+        "Awaaz clear nahi aayi. Hindi ya Hinglish mein ek baar phir boliye.",
+        action,
+      ),
     );
   }
-
-  const response = turn.hangup
-    ? xmlResponse(hangupXml(turn.speak))
-    : xmlResponse(speakGatherXml(turn.speak, action));
-
-  after(async () => {
-    try {
-      const existing = await findCallByUuid(uuid);
-      if (existing) {
-        const line = speech
-          ? `YOU: ${speech}\nKRISHI: ${turn.speak}`
-          : `KRISHI: ${turn.speak}`;
-        const transcript = existing.transcript
-          ? `${existing.transcript}\n${line}`
-          : line;
-        await updateCall(existing.id, {
-          lastSpeech: speech,
-          transcript,
-          disposition: turn.hangup ? "completed" : existing.disposition,
-        });
-        await upsertCaseFromCall({
-          phone: existing.phone,
-          farmerName: "Farmer",
-          direction: existing.direction,
-          source: "vobiz",
-          channel: uuid,
-          summary: speech || turn.speak,
-          transcript,
-          status: turn.hangup ? "completed" : "open",
-        });
-      }
-      if (turn.backgroundWeatherPlace) {
-        await persistPlaceWeather(uuid, turn.backgroundWeatherPlace);
-      }
-    } catch (err) {
-      console.error("[vobiz/gather] persist failed", err);
-    }
-  });
-
-  return response;
 }

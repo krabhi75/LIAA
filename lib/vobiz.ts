@@ -1,44 +1,10 @@
-import {
-  KRISHI_NO_HEAR,
-  VOBIZ_GATHER_HINTS,
-  VOBIZ_STT_LANGUAGE,
-  VOBIZ_TTS_VOICE,
-} from "./phone-voice";
-
-function xmlEscape(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-export function vobizXml(inner: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
-}
-
-/** Polly.Aditi for Indian Hindi TTS — never use WOMAN+hi-IN (Vobiz falls back to en-US). */
-export function speakXml(text: string): string {
-  return `<Speak voice="${VOBIZ_TTS_VOICE}">${xmlEscape(text)}</Speak>`;
-}
-
-export function speakGatherXml(prompt: string, actionUrl: string): string {
-  const speak = speakXml(prompt);
-  const answerUrl = actionUrl.replace(/\/gather(?:\?.*)?$/i, "/answer");
-  return vobizXml(
-    `<Gather action="${xmlEscape(actionUrl)}" method="POST" inputType="speech" language="${VOBIZ_STT_LANGUAGE}" speechModel="telephony" speechEndTimeout="4" executionTimeout="30" profanityFilter="false" hints="${xmlEscape(VOBIZ_GATHER_HINTS)}">${speak}</Gather>${speakXml(KRISHI_NO_HEAR)}<Redirect>${xmlEscape(answerUrl)}</Redirect>`,
-  );
-}
-
-export function hangupXml(message: string): string {
-  return vobizXml(`${speakXml(message)}<Hangup/>`);
-}
-
-export function xmlResponse(xml: string): Response {
-  return new Response(xml, {
-    headers: { "Content-Type": "application/xml; charset=utf-8" },
-  });
-}
+export {
+  hangupXml,
+  speakGatherXml,
+  speakXml,
+  xmlResponse,
+  voiceBase as voicePublicBase,
+} from "./vobiz-xml";
 
 export function speechFromVobizParams(params: Record<string, string>): string {
   const raw =
@@ -131,7 +97,7 @@ export async function placeVobizCall(opts: {
         hangup_url: opts.hangupUrl,
         hangup_method: "POST",
         caller_name: "KrishiSaathi",
-        time_limit: 180,
+        time_limit: 600,
       }),
     },
   );
@@ -158,7 +124,11 @@ export function mapDisposition(params: Record<string, string>): string {
   const answered = Boolean(params.AnswerTime || params.answer_time);
 
   if (cause.includes("busy")) return "busy";
-  if (cause.includes("no_answer") || cause.includes("no-answer") || cause.includes("noanswer")) {
+  if (
+    cause.includes("no_answer") ||
+    cause.includes("no-answer") ||
+    cause.includes("noanswer")
+  ) {
     return "no_answer";
   }
   if (cause.includes("cancel")) return "cancelled";

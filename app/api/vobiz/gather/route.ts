@@ -7,6 +7,7 @@ import {
   xmlResponse,
 } from "@/lib/vobiz";
 import { findCallByUuid, updateCall } from "@/lib/crm-store";
+import { upsertCaseFromCall } from "@/lib/agri-cases";
 
 export async function POST(req: Request) {
   const params = await parseVobizBody(req);
@@ -16,10 +17,21 @@ export async function POST(req: Request) {
   const existing = await findCallByUuid(uuid);
   if (existing) {
     const line = speech ? `YOU: ${speech}\nLIAA: ${turn.speak}` : `LIAA: ${turn.speak}`;
+    const transcript = existing.transcript ? `${existing.transcript}\n${line}` : line;
     await updateCall(existing.id, {
       lastSpeech: speech,
-      transcript: existing.transcript ? `${existing.transcript}\n${line}` : line,
+      transcript,
       disposition: turn.hangup ? "completed" : existing.disposition,
+    });
+    upsertCaseFromCall({
+      phone: existing.phone,
+      farmerName: "Farmer",
+      direction: existing.direction,
+      source: "vobiz",
+      channel: uuid,
+      summary: speech || turn.speak,
+      transcript,
+      status: turn.hangup ? "completed" : "open",
     });
   }
   if (turn.hangup) return xmlResponse(hangupXml(turn.speak));

@@ -12,11 +12,11 @@ export async function POST(req: Request) {
     phone?: string;
     company?: string;
   };
-  if (!body.name || !body.phone) {
-    return NextResponse.json({ error: "name and phone required" }, { status: 400 });
+  if (!body.phone) {
+    return NextResponse.json({ error: "phone required" }, { status: 400 });
   }
   const contact = await createContact({
-    name: body.name,
+    name: body.name?.trim() || "Farmer",
     phone: body.phone,
     company: body.company,
   });

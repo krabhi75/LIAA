@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { publicBaseUrl } from "@/lib/agora";
 import { normalizePhone, placeVobizCall, vobizConfig } from "@/lib/vobiz";
-import { createCall, findContact, updateCall } from "@/lib/crm-store";
+import { createCall, findContact, updateCall, upsertContactByPhone } from "@/lib/crm-store";
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { phone?: string; contactId?: string };
+  const body = (await req.json()) as {
+    phone?: string;
+    contactId?: string;
+    name?: string;
+  };
   const { authId, token, from } = vobizConfig();
   if (!authId || !token) {
     return NextResponse.json(
@@ -24,7 +28,7 @@ export async function POST(req: Request) {
   }
 
   let phone = body.phone ? normalizePhone(body.phone) : "";
-  const contactId = body.contactId;
+  let contactId = body.contactId;
   if (contactId) {
     const c = await findContact(contactId);
     if (!c) return NextResponse.json({ error: "contact not found" }, { status: 404 });
@@ -33,6 +37,11 @@ export async function POST(req: Request) {
   if (!phone) {
     return NextResponse.json({ error: "phone required" }, { status: 400 });
   }
+  const farmer = await upsertContactByPhone({
+    name: body.name?.trim() || "Farmer",
+    phone,
+  });
+  contactId = farmer?.id ?? contactId;
 
   const row = await createCall({
     contactId: contactId ?? null,
@@ -52,7 +61,7 @@ export async function POST(req: Request) {
       vobizUuid: placed.requestUuid || `pending-${row.id}`,
       status: "ringing",
     });
-    return NextResponse.json({ call: call ?? row, from });
+    return NextResponse.json({ call: call ?? row, from, farmerId: farmer?.id ?? null });
   } catch (err) {
     await updateCall(row.id, { status: "failed", disposition: "failed" });
     return NextResponse.json(

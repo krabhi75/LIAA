@@ -39,9 +39,6 @@ export default function LandingPage() {
           <Link href="/crm" className="nova-btn nova-btn--start">
             Phone CRM
           </Link>
-          <Link href="/whatsapp" className="nova-btn">
-            WhatsApp
-          </Link>
         </div>
 
         <section className="mt-20 grid gap-8 md:grid-cols-3">

@@ -229,6 +229,68 @@ export async function findContact(id: string): Promise<StoredContact | null> {
   return mem().contacts.find((c) => c.id === id) ?? null;
 }
 
+export async function findContactByPhone(phoneRaw: string): Promise<StoredContact | null> {
+  const phone = normalizePhone(phoneRaw);
+  if (!phone) return null;
+  if (prismaOk()) {
+    try {
+      const c = await prisma.crmContact.findFirst({ where: { phone } });
+      if (c) {
+        return {
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          company: c.company,
+          notes: c.notes,
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
+        };
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return mem().contacts.find((c) => c.phone === phone) ?? null;
+}
+
+export async function appendContactNote(
+  id: string,
+  note: string,
+): Promise<StoredContact | null> {
+  const line = `${nowIso()} · ${note.trim()}`;
+  if (!note.trim()) return findContact(id);
+  if (prismaOk()) {
+    try {
+      const existing = await prisma.crmContact.findUnique({ where: { id } });
+      if (!existing) return null;
+      const c = await prisma.crmContact.update({
+        where: { id },
+        data: {
+          notes: existing.notes ? `${existing.notes}\n${line}` : line,
+        },
+      });
+      return {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        company: c.company,
+        notes: c.notes,
+        createdAt: c.createdAt.toISOString(),
+        updatedAt: c.updatedAt.toISOString(),
+      };
+    } catch {
+      /* fall through */
+    }
+  }
+  const bag = mem();
+  const row = bag.contacts.find((c) => c.id === id);
+  if (!row) return null;
+  row.notes = row.notes ? `${row.notes}\n${line}` : line;
+  row.updatedAt = nowIso();
+  persist(bag);
+  return row;
+}
+
 export async function listCalls(): Promise<(StoredCall & { contact: { name: string } | null })[]> {
   if (prismaOk()) {
     try {
